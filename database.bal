@@ -3,6 +3,11 @@ import ballerina/sql;
 import ballerinax/mysql;
 import ballerinax/mysql.driver as _;
 
+type Province record {|
+    int id;
+    string name;
+|};
+
 service / on new http:Listener(8080) {
     private final mysql:Client db;
 
