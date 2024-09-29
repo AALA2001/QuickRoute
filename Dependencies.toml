@@ -46,6 +46,9 @@ dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "time"}
 ]
+modules = [
+	{org = "ballerina", packageName = "crypto", moduleName = "crypto"}
+]
 
 [[package]]
 org = "ballerina"
@@ -353,6 +356,7 @@ org = "virulnirmala"
 name = "QuickRoute"
 version = "0.1.0"
 dependencies = [
+	{org = "ballerina", name = "crypto"},
 	{org = "ballerina", name = "email"},
 	{org = "ballerina", name = "http"},
 	{org = "ballerina", name = "io"},
@@ -363,6 +367,9 @@ dependencies = [
 	{org = "ballerinax", name = "mysql.driver"}
 ]
 modules = [
-	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute"}
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute"},
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.db"},
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.email"},
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.password"}
 ]
 
