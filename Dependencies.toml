@@ -380,7 +380,6 @@ modules = [
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.db"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.email"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.password"},
-	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.session"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.utils"}
 ]
 
