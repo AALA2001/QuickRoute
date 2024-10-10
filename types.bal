@@ -23,3 +23,8 @@ public type RequestUser record {|
     string email;
     string password;
 |};
+
+public type LoginUser record {|
+    string email;
+    string password;
+|};
