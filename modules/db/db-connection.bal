@@ -1,6 +1,5 @@
 import ballerinax/mysql;
 import ballerinax/mysql.driver as _;
-import ballerina/sql;
 
 configurable string host = ?;
 configurable string username = ?;
@@ -9,7 +8,7 @@ configurable string database = ?;
 configurable int port = ?;
 
 
-mysql:Client|sql:Error dbClient = new (
+final mysql:Client dbClient = check  new (
     host,
     username,
     passsword,
@@ -17,6 +16,6 @@ mysql:Client|sql:Error dbClient = new (
     port
 );
 
-public function getConnection() returns  mysql:Client|sql:Error {
+public function getConnection() returns  mysql:Client{
     return dbClient;
 }
