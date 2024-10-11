@@ -28,3 +28,14 @@ public type LoginUser record {|
     string email;
     string password;
 |};
+
+public type Destination record {|
+    int id;
+    string title;
+    string productId;
+    string productSlug;
+    string taxonomySlug;
+    string cityUfi;
+    string cityName;
+    string countryCode;
+|};

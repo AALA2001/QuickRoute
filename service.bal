@@ -14,6 +14,8 @@ http:ClientConfiguration clientEPConfig = {
     }
 };
 listener http:Listener authEP = new (9091);
+listener http:Listener clientEP = new (9092);
+
 @http:ServiceConfig {
     cors: {
         allowOrigins: ["*"],
@@ -28,7 +30,11 @@ service /auth on authEP {
         self.connection = db:getConnection();
     }
 
-    resource function post register(@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
+    function __deinit() returns sql:Error? {
+            _ = checkpanic self.connection.close();
+    }
+
+    resource function post user/register (@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -98,7 +104,7 @@ service /auth on authEP {
         return response;
     }
 
-    resource function post login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
+    resource function post user/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -147,4 +153,9 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
+
+}
+
+service /data on clientEP {
+
 }
