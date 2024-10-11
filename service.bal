@@ -8,11 +8,17 @@ import ballerina/regex;
 import ballerina/sql;
 import ballerinax/mysql;
 
+http:ClientConfiguration clientEPConfig = {
+    cookieConfig: {
+        enabled: true
+    }
+};
 listener http:Listener authEP = new (9091);
 @http:ServiceConfig {
     cors: {
         allowOrigins: ["*"],
-        allowMethods: ["GET", "POST", "PUT", "DELETE"]
+        allowMethods: ["GET", "POST", "PUT", "DELETE"],
+        allowCredentials: true
     }
 }
 service /auth on authEP {
