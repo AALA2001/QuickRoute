@@ -9,7 +9,12 @@ import ballerina/sql;
 import ballerinax/mysql;
 
 listener http:Listener authEP = new (9091);
-
+@http:ServiceConfig {
+    cors: {
+        allowOrigins: ["*"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE"]
+    }
+}
 service /auth on authEP {
     private final mysql:Client connection;
 
