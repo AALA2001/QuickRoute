@@ -1,4 +1,5 @@
 import QuickRoute.db;
+import QuickRoute.jwt;
 import QuickRoute.password;
 import QuickRoute.utils;
 
@@ -6,7 +7,6 @@ import ballerina/http;
 import ballerina/regex;
 import ballerina/sql;
 import ballerinax/mysql;
-import QuickRoute.jwt;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -31,10 +31,10 @@ service /auth on authEP {
     }
 
     function __deinit() returns sql:Error? {
-            _ = checkpanic self.connection.close();
+        _ = checkpanic self.connection.close();
     }
 
-    resource function post user/register (@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
+    resource function post user/register(@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -90,7 +90,7 @@ service /auth on authEP {
                     userType: "user"
                 };
                 string token = check jwt:generateJWT(UserDTO.toJsonString());
-                responseObj = {"success": true, "content": "Successfully Registered" , "token":token};
+                responseObj = {"success": true, "content": "Successfully Registered", "token": token};
             } else {
                 responseObj = {"success": false, "content": "User already exists"};
             }
@@ -132,7 +132,7 @@ service /auth on authEP {
                         userType: "user"
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    responseObj = {"success": true, "content": "Successfully Signed In","token":token};
+                    responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
                 }
@@ -145,7 +145,7 @@ service /auth on authEP {
         return response;
     }
 
-  resource function post admin/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
+    resource function post admin/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -178,7 +178,7 @@ service /auth on authEP {
                         userType: "admin"
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    responseObj = {"success": true, "content": "Successfully Signed In","token":token};
+                    responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
                 }
