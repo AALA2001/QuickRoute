@@ -522,5 +522,18 @@ service /data on clientEP {
         return response;
     }
 
-   
+    resource function get admin/getReviews() returns http:Response|sql:Error {
+        http:Response response = new;
+        json responseObject = {};
+        DBReview[] reviews = [];
+        stream<DBReview, sql:Error?> reviewStream = self.connection->query(`SELECT reviews.id AS review_id, user.first_name, user.last_name, user.email, reviews.review FROM reviews INNER JOIN user ON user.id = reviews.user_id`);
+        check reviewStream.forEach(function(DBReview review) {
+            reviews.push(review);
+        });
+        responseObject = {"success": true, "content": reviews.toJson()};
+        response.setJsonPayload(responseObject);
+        return response;
+    }
+
+
 }
