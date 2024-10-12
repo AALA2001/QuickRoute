@@ -3,10 +3,10 @@ import QuickRoute.password;
 import QuickRoute.utils;
 
 import ballerina/http;
-import ballerina/random;
 import ballerina/regex;
 import ballerina/sql;
 import ballerinax/mysql;
+import QuickRoute.jwt;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -83,23 +83,17 @@ service /auth on authEP {
             DBUser|sql:Error result = self.connection->queryRow(`SELECT * FROM user WHERE email = ${user.email}`);
             if result is sql:NoRowsError {
                 _ = check self.connection->execute(`INSERT INTO user (first_name,last_name,email,password)  VALUES (${user.first_name}, ${user.last_name}, ${user.email}, ${hashedPassword});`);
-                float sessionID = random:createDecimal();
                 UserDTO UserDTO = {
                     first_name: user.first_name,
                     last_name: user.last_name,
                     email: user.email
                 };
-                http:Cookie sessionCookie = new ("BALSESSIONID", sessionID.toString(), path = "/");
-                http:Cookie userCookie = new ("BALUSER", UserDTO.toString(), path = "/");
-
-                response.addCookie(sessionCookie);
-                response.addCookie(userCookie);
-                responseObj = {"success": true, "content": "Successfully Registered"};
+                string token = check jwt:generateJWT(UserDTO.toJsonString());
+                responseObj = {"success": true, "content": "Successfully Registered" , "token":token};
             } else {
                 responseObj = {"success": false, "content": "User already exists"};
             }
         }
-
         response.setJsonPayload(responseObj);
         return response;
     }
@@ -130,18 +124,13 @@ service /auth on authEP {
             if result is DBUser {
                 boolean isPasswordValid = password:verifyHmac(user.password, result.password);
                 if isPasswordValid {
-                    float sessionID = random:createDecimal();
                     UserDTO UserDTO = {
                         first_name: result.first_name,
                         last_name: result.last_name,
                         email: result.email
                     };
-                    http:Cookie sessionCookie = new ("BALSESSIONID", sessionID.toString(), path = "/");
-                    http:Cookie userCookie = new ("BALUSER", UserDTO.toString(), path = "/");
-
-                    response.addCookie(sessionCookie);
-                    response.addCookie(userCookie);
-                    responseObj = {"success": true, "content": "Successfully Signed In"};
+                    string token = check jwt:generateJWT(UserDTO.toJsonString());
+                    responseObj = {"success": true, "content": "Successfully Signed In","token":token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
                 }

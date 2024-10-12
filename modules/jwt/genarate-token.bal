@@ -18,7 +18,7 @@ public function generateJWT(json payload) returns error|string {
 
     byte[] hmacMd5 = check crypto:hmacMd5(signatureInput.toBytes(), secret.toBytes());
     string|byte[]|io:ReadableByteChannel encodedSignature = check mime:base64Encode(hmacMd5.toString());
-    return <string>encodedHeader + "." + <string>encodedPayload + "." + <string>encodedSignature;
+    return <string>(<string>encodedHeader + "." + <string>encodedPayload + "." + <string>encodedSignature);
 }
 
 public function decodeJWT(string jwt) returns json|error {
