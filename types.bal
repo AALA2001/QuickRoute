@@ -1,3 +1,4 @@
+import ballerina/time;
 public type Province record {|
     int id;
     string name;
@@ -40,4 +41,78 @@ public type Destination record {|
     string cityUfi;
     string cityName;
     string countryCode;
+|};
+
+public type DBCountry record {|
+    int id;
+    string name;
+|};
+
+public type DBDestination record {|
+    int id;
+    string title;
+    string image;
+    string description;
+    int country_id;
+|};
+
+public type DBLocation record {|
+    int id;
+    string title;
+    string image;
+    string overview;
+    int tour_type_id;
+    int destinations_id;
+|};
+
+public type DBTourType record {|
+    int id;
+    string 'type;
+|};
+
+public type DBOffer record {|
+    int id;
+    time:Civil from_Date;
+    time:Civil to_Date;
+    string title;
+    string image;
+    int destination_location_id;
+|};
+
+public type DBReview record {|
+    int review_id;
+    string review;
+    string first_name;
+    string last_name;
+    string email;
+|};
+
+public type DBOfferDetals record {|
+    int offer_id;
+    time:Civil from_Date;
+    time:Civil to_Date;
+    string title;
+    string image;
+    string location_title;
+    string tour_type;
+    string destination_title;
+    string country_name;
+|};
+
+public type DBLocationDetails record {|
+    int location_id;
+    string title;
+    string image;
+    string overview;
+    string tour_type;
+    string destination_title;
+    string country_name;
+|};
+
+public type DBDestinationDetails record {|
+    int destination_id;
+    string title;
+    string image;
+    string description;
+    string country_name;
 |};
