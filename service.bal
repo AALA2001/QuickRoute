@@ -1,4 +1,5 @@
 import QuickRoute.db;
+import QuickRoute.img;
 import QuickRoute.jwt;
 import QuickRoute.password;
 import QuickRoute.time;
@@ -7,12 +8,11 @@ import QuickRoute.utils;
 import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/io;
+import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
-import ballerina/mime;
-import QuickRoute.img;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -218,9 +218,27 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
+
+    resource function get admin/checkin/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
+        json responseObj = {};
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if payload.userType is "admin" {
+            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+                responseObj = {"success": true, "content": "admin is active"};
+            } else {
+                responseObj = {"success": false, "content": "Session Expired"};
+            }
+        }
+        io:println(responseObj);
+        response.setJsonPayload(responseObj);
+        return response;
+    }
 }
 
 service /data on clientEP {
+
     private final mysql:Client connection;
 
     function init() returns error? {
@@ -231,95 +249,114 @@ service /data on clientEP {
         _ = checkpanic self.connection.close();
     }
 
-    resource function post admin/addDestination(http:Request req) returns http:Response|error? {
-        mime:Entity[] parts = check req.getBodyParts();
-        http:Response response = new;
-        json responseObject = {};
-        string coutryId = "";
-        string title = "";
-        string description = "";
-        boolean isImageInclude = false;
-
-        string|error contentType = req.getContentType();
-        if contentType is string && !contentType.startsWith("multipart/form-data") {
-            responseObject = {"success": false, "content": "Unsupported content type. Expected multipart/form-data."};
-        } else if parts.length() == 0 {
-            responseObject = {"success": false, "content": "Request body is empty"};
+    function isAdmin(http:Request request) returns boolean|error {
+        string|http:HeaderNotFoundError authHeader = request.getHeader("Authorization");
+        if authHeader is string && authHeader.startsWith("Bearer ") {
+            string token = authHeader.substring(7);
+            json decodeJWT = check jwt:decodeJWT(token);
+            UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+            if payload.userType is "admin" {
+                return true;
+            }
         } else {
-            foreach mime:Entity part in parts {
-                string? dispositionName = part.getContentDisposition().name;
-                string|mime:ParserError text = part.getText();
-                if dispositionName is "country_id" {
-                    if text is string {
-                        coutryId = text;
-                    } else {
-                        responseObject = {"success": false, "content": "Error in retrieving country_id field"};
-                    }
-                } else if dispositionName is "title" {
-                    if text is string {
-                        title = text;
-                    } else {
-                        responseObject = {"success": false, "content": "Error in retrieving title field"};
-                    }
-                } else if dispositionName is "description" {
-                    if text is string {
-                        description = text;
-                    } else {
-                        responseObject = {"success": false, "content": "Error in retrieving description field"};
-                        return error("");
-                    }
-                } else if dispositionName is "file" {
-                    string|mime:ParserError contentTypee = part.getContentType();
-                    if contentTypee is string {
-                        if string:startsWith(contentTypee, "image/") {
-                            isImageInclude = true;
-                        } else {
-                            responseObject = {"success": false, "content": "Invalid or unsupported image file type"};
-                        }
-                    } else {
-                        responseObject = {"success": false, "content": "Failed to retrieve content type"};
-                    }
-                }
-            }
-
-            if coutryId is "" || title is "" || description is "" {
-                responseObject = {"success": false, "content": "Parameters are empty"};
-            } else {
-                if isImageInclude is true {
-                    if int:fromString(coutryId) is int {
-
-                        DBCountry|sql:Error result = self.connection->queryRow(`SELECT * FROM country WHERE id=${coutryId}`);
-                        if result is sql:NoRowsError {
-                            responseObject = {"success": false, "content": "Country not found"};
-                        } else if result is sql:Error {
-                            responseObject = {"success": false, "content": "Error in retrieving country"};
-                        } else {
-                            DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE title = ${title} AND country_id=${coutryId} `);
-                            if desResult is sql:NoRowsError {
-                                string|error uploadedImagePath = img:uploadImage(req, "uploads/destinations/", title);
-                                if uploadedImagePath is string {
-                                    _ = check self.connection->execute(`INSERT INTO destinations (title,country_id,image,description) VALUES (${title},${coutryId},${uploadedImagePath},${description})`);
-                                    responseObject = {"success": true, "content": "Successfully uploaded destination"};
-                                } else {
-                                    responseObject = {"success": false, "content": "Error in uploading image"};
-                                }
-                            } else if desResult is sql:Error {
-                                responseObject = {"success": false, "content": "Error in retrieving destination"};
-                            } else {
-                                responseObject = {"success": false, "content": "Destination already exists"};
-                            }
-                        }
-                    } else {
-                        responseObject = {"success": false, "content": "Invalid type country ID"};
-                    }
-                } else {
-                    responseObject = {"success": false, "content": "Image is required"};
-                }
-            }
+            return false;
         }
+        return false;
+    }
 
-        response.setJsonPayload(responseObject);
-        return response;
+    resource function post admin/addDestination(http:Request req) returns http:Response|error? {
+        if check self.isAdmin(req) {
+            mime:Entity[] parts = check req.getBodyParts();
+            http:Response response = new;
+            json responseObject = {};
+            string coutryId = "";
+            string title = "";
+            string description = "";
+            boolean isImageInclude = false;
+
+            string|error contentType = req.getContentType();
+            if contentType is string && !contentType.startsWith("multipart/form-data") {
+                responseObject = {"success": false, "content": "Unsupported content type. Expected multipart/form-data."};
+            } else if parts.length() == 0 {
+                responseObject = {"success": false, "content": "Request body is empty"};
+            } else {
+                foreach mime:Entity part in parts {
+                    string? dispositionName = part.getContentDisposition().name;
+                    string|mime:ParserError text = part.getText();
+                    if dispositionName is "country_id" {
+                        if text is string {
+                            coutryId = text;
+                        } else {
+                            responseObject = {"success": false, "content": "Error in retrieving country_id field"};
+                        }
+                    } else if dispositionName is "title" {
+                        if text is string {
+                            title = text;
+                        } else {
+                            responseObject = {"success": false, "content": "Error in retrieving title field"};
+                        }
+                    } else if dispositionName is "description" {
+                        if text is string {
+                            description = text;
+                        } else {
+                            responseObject = {"success": false, "content": "Error in retrieving description field"};
+                            return error("");
+                        }
+                    } else if dispositionName is "file" {
+                        string|mime:ParserError contentTypee = part.getContentType();
+                        if contentTypee is string {
+                            if string:startsWith(contentTypee, "image/") {
+                                isImageInclude = true;
+                            } else {
+                                responseObject = {"success": false, "content": "Invalid or unsupported image file type"};
+                            }
+                        } else {
+                            responseObject = {"success": false, "content": "Failed to retrieve content type"};
+                        }
+                    }
+                }
+
+                if coutryId is "" || title is "" || description is "" {
+                    responseObject = {"success": false, "content": "Parameters are empty"};
+                } else {
+                    if isImageInclude is true {
+                        if int:fromString(coutryId) is int {
+
+                            DBCountry|sql:Error result = self.connection->queryRow(`SELECT * FROM country WHERE id=${coutryId}`);
+                            if result is sql:NoRowsError {
+                                responseObject = {"success": false, "content": "Country not found"};
+                            } else if result is sql:Error {
+                                responseObject = {"success": false, "content": "Error in retrieving country"};
+                            } else {
+                                DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE title = ${title} AND country_id=${coutryId} `);
+                                if desResult is sql:NoRowsError {
+                                    string|error uploadedImagePath = img:uploadImage(req, "uploads/destinations/", title);
+                                    if uploadedImagePath is string {
+                                        _ = check self.connection->execute(`INSERT INTO destinations (title,country_id,image,description) VALUES (${title},${coutryId},${uploadedImagePath},${description})`);
+                                        responseObject = {"success": true, "content": "Successfully uploaded destination"};
+                                    } else {
+                                        responseObject = {"success": false, "content": "Error in uploading image"};
+                                    }
+                                } else if desResult is sql:Error {
+                                    responseObject = {"success": false, "content": "Error in retrieving destination"};
+                                } else {
+                                    responseObject = {"success": false, "content": "Destination already exists"};
+                                }
+                            }
+                        } else {
+                            responseObject = {"success": false, "content": "Invalid type country ID"};
+                        }
+                    } else {
+                        responseObject = {"success": false, "content": "Image is required"};
+                    }
+                }
+            }
+
+            response.setJsonPayload(responseObject);
+            return response;
+        } else {
+            return error("Invalid token");
+        }
     }
 
     resource function post admin/addLocation(http:Request req) returns error|http:Response {
