@@ -202,12 +202,21 @@ service /auth on authEP {
         return response;
     }
 
-    resource function get user/checkin/[string BALUSERTOKEN]() returns error? {
+    resource function get user/checkin/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
+        json responseObj = {};
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         if payload.userType is "user" {
-            io:println(payload);
+            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+                responseObj = {"success": true, "content": "User is active"};
+            } else {
+                responseObj = {"success": false, "content": "Session Expired"};
+            }
         }
+        io:println(responseObj);
+        response.setJsonPayload(responseObj);
+        return response;
     }
 }
 
