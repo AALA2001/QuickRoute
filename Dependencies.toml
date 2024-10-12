@@ -318,7 +318,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "time"
-version = "2.5.0"
+version = "2.4.0"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -391,11 +391,8 @@ modules = [
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.db"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.email"},
-<<<<<<< HEAD
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.img"},
-=======
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.jwt"},
->>>>>>> origin/Authorization
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.password"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.utils"}
 ]
