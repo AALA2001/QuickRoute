@@ -313,5 +313,106 @@ service /data on clientEP {
         return response;
     }
 
+    resource function post admin/addLocation(http:Request req) returns error|http:Response {
+        mime:Entity[] parts = check req.getBodyParts();
+        http:Response response = new;
+        json responseObject = {};
+        string destinationId = "";
+        string tourTypeId = "";
+        string title = "";
+        string overview = "";
+        boolean isImageInclude = false;
+
+        string|error contentType = req.getContentType();
+        if contentType is string && !contentType.startsWith("multipart/form-data") {
+            responseObject = {"success": false, "content": "Unsupported content type. Expected multipart/form-data."};
+        } else if parts.length() == 0 {
+            responseObject = {"success": false, "content": "Request body is empty"};
+        } else {
+            foreach mime:Entity part in parts {
+                string? dispositionName = part.getContentDisposition().name;
+                string|mime:ParserError text = part.getText();
+                if dispositionName is "destinationId" {
+                    if text is string {
+                        destinationId = text;
+                    } else {
+                        responseObject = {"success": false, "content": "Error in retrieving destinationId field"};
+                    }
+                } else if dispositionName is "tourTypeId" {
+                    if text is string {
+                        tourTypeId = text;
+                    } else {
+                        responseObject = {"success": false, "content": "Error in retrieving tourTypeId field"};
+                    }
+                } else if dispositionName is "title" {
+                    if text is string {
+                        title = text;
+                    } else {
+                        responseObject = {"success": false, "content": "Error in retrieving title field"};
+                    }
+                } else if dispositionName is "overview" {
+                    if text is string {
+                        overview = text;
+                    } else {
+                        responseObject = {"success": false, "content": "Error in retrieving overview field"};
+                    }
+                } else if dispositionName is "file" {
+                    string|mime:ParserError contentTypee = part.getContentType();
+                    if contentTypee is string {
+                        if string:startsWith(contentTypee, "image/") {
+                            isImageInclude = true;
+                        } else {
+                            responseObject = {"success": false, "content": "Invalid or unsupported image file type"};
+                        }
+                    } else {
+                        responseObject = {"success": false, "content": "Failed to retrieve content type"};
+                    }
+                }
+            }
+
+            if destinationId is "" || title is "" || overview is "" || tourTypeId is "" {
+                responseObject = {"success": false, "content": "Parameters are empty"};
+            } else {
+                if isImageInclude is true {
+                    if int:fromString(destinationId) is int && int:fromString(tourTypeId) is int {
+
+                        DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
+                        DBTourType|sql:Error tourResult = self.connection->queryRow(`SELECT * FROM tour_type WHERE id=${tourTypeId}`);
+                        if desResult is sql:NoRowsError {
+                            responseObject = {"success": false, "content": "Destination not found"};
+                        } else if tourResult is sql:NoRowsError {
+                            responseObject = {"success": false, "content": "Tour Type not found"};
+                        } else if desResult is sql:Error {
+                            responseObject = {"success": false, "content": "Error in retrieving destination"};
+                        } else if tourResult is sql:Error {
+                            responseObject = {"success": false, "content": "Error in retrieving tour type"};
+                        } else {
+                            DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM  destination_location WHERE title=${title} AND destinations_id=${destinationId}`);
+                            if locationResult is sql:NoRowsError {
+                                string|error uploadedImagePath = img:uploadImage(req, "uploads/locations/", title);
+                                if uploadedImagePath is string {
+                                    _ = check self.connection->execute(`INSERT INTO destination_location (title,image,overview,tour_type_id,destinations_id) VALUES (${title},${uploadedImagePath},${overview},${tourTypeId},${destinationId})`);
+                                    responseObject = {"success": true, "content": "Successfully uploaded destination location"};
+                                } else {
+                                    responseObject = {"success": false, "content": "Error in uploading image"};
+                                }
+                            } else if locationResult is sql:Error {
+                                responseObject = {"success": false, "content": "Error in retrieving location"};
+                            } else {
+                                responseObject = {"success": false, "content": "Destination Location already exists"};
+                            }
+                        }
+                    } else {
+                        responseObject = {"success": false, "content": "Invalid IDs"};
+                    }
+                } else {
+                    responseObject = {"success": false, "content": "Image is required"};
+                }
+            }
+        }
+
+        response.setJsonPayload(responseObject);
+        return response;
+    }
 
 }
