@@ -535,5 +535,18 @@ service /data on clientEP {
         return response;
     }
 
+    resource function get admin/getOffers() returns http:Response|sql:Error {
+        http:Response response = new;
+        json responseObject = {};
+        DBOfferDetals[] offers = [];
+        stream<DBOfferDetals, sql:Error?> offersStream = self.connection->query(`SELECT offers.id AS offer_id, offers.from_Date, offers.to_Date, offers.title, offers.image, destination_location.title AS location_title, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name FROM offers INNER JOIN destination_location ON destination_location.id = offers.destination_location_id INNER JOIN tour_type ON tour_type.id=destination_location.tour_type_id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON country.id = destinations.country_id`);
+        check offersStream.forEach(function(DBOfferDetals offer) {
+            offers.push(offer);
+        });
+        responseObject = {"success": true, "content": offers.toJson()};
+        response.setJsonPayload(responseObject);
+        return response;
+    }
+
 
 }
