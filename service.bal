@@ -249,23 +249,7 @@ service /data on clientEP {
         _ = checkpanic self.connection.close();
     }
 
-    function isAdmin(http:Request request) returns boolean|error {
-        string|http:HeaderNotFoundError authHeader = request.getHeader("Authorization");
-        if authHeader is string && authHeader.startsWith("Bearer ") {
-            string token = authHeader.substring(7);
-            json decodeJWT = check jwt:decodeJWT(token);
-            UserDTO payload = check jsondata:parseString(decodeJWT.toString());
-            if payload.userType is "admin" {
-                return true;
-            }
-        } else {
-            return false;
-        }
-        return false;
-    }
-
     resource function post admin/addDestination(http:Request req) returns http:Response|error? {
-        if check self.isAdmin(req) {
             mime:Entity[] parts = check req.getBodyParts();
             http:Response response = new;
             json responseObject = {};
@@ -321,7 +305,6 @@ service /data on clientEP {
                 } else {
                     if isImageInclude is true {
                         if int:fromString(coutryId) is int {
-
                             DBCountry|sql:Error result = self.connection->queryRow(`SELECT * FROM country WHERE id=${coutryId}`);
                             if result is sql:NoRowsError {
                                 responseObject = {"success": false, "content": "Country not found"};
@@ -354,9 +337,6 @@ service /data on clientEP {
 
             response.setJsonPayload(responseObject);
             return response;
-        } else {
-            return error("Invalid token");
-        }
     }
 
     resource function post admin/addLocation(http:Request req) returns error|http:Response {
