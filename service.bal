@@ -1,6 +1,7 @@
 import QuickRoute.db;
 import QuickRoute.jwt;
 import QuickRoute.password;
+import QuickRoute.time;
 import QuickRoute.utils;
 
 import ballerina/data.jsondata;
@@ -10,7 +11,6 @@ import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
-import QuickRoute.time;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -200,15 +200,15 @@ service /auth on authEP {
         return response;
     }
 
-    resource function get user/checkin/[string BALUSERTOKEN]() returns error| http:Response {
-         http:Response response = new;
+    resource function get user/checkin/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
         json responseObj = {};
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         if payload.userType is "user" {
-            if (time:validateExpierTime(time:currentTimeStamp(),payload.expiryTime)){
+            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
                 responseObj = {"success": true, "content": "User is active"};
-            }else {
+            } else {
                 responseObj = {"success": false, "content": "Session Expired"};
             }
         }
