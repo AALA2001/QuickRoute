@@ -548,5 +548,18 @@ service /data on clientEP {
         return response;
     }
 
+    resource function get admin/getLocations() returns http:Response|sql:Error {
+        http:Response response = new;
+        json responseObject = {};
+        DBLocationDetails[] locations = [];
+        stream<DBLocationDetails, sql:Error?> locationStream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type AS tour_type, destinations.title AS destination_title,country.name AS country_name FROM destination_location INNER JOIN tour_type ON tour_type.id=destination_location.tour_type_id INNER JOIN destinations ON destinations.id=destination_location.destinations_id INNER JOIN country  ON country.id = destinations.country_id`);
+        check locationStream.forEach(function(DBLocationDetails location) {
+            locations.push(location);
+        });
+        responseObject = {"success": true, "content": locations.toJson()};
+        response.setJsonPayload(responseObject);
+        return response;
+    }
 
+  
 }
