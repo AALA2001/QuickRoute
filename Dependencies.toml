@@ -391,7 +391,11 @@ modules = [
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.db"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.email"},
+<<<<<<< HEAD
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.img"},
+=======
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.jwt"},
+>>>>>>> origin/Authorization
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.password"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.utils"}
 ]
