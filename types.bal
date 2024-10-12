@@ -15,6 +15,7 @@ public type UserDTO record {|
     string first_name;
     string last_name;
     string email;
+    string userType;
 |};
 
 public type RequestUser record {|

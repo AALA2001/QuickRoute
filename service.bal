@@ -86,7 +86,8 @@ service /auth on authEP {
                 UserDTO UserDTO = {
                     first_name: user.first_name,
                     last_name: user.last_name,
-                    email: user.email
+                    email: user.email,
+                    userType: "user"
                 };
                 string token = check jwt:generateJWT(UserDTO.toJsonString());
                 responseObj = {"success": true, "content": "Successfully Registered" , "token":token};
@@ -127,7 +128,8 @@ service /auth on authEP {
                     UserDTO UserDTO = {
                         first_name: result.first_name,
                         last_name: result.last_name,
-                        email: result.email
+                        email: result.email,
+                        userType: "user"
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
                     responseObj = {"success": true, "content": "Successfully Signed In","token":token};
@@ -143,6 +145,51 @@ service /auth on authEP {
         return response;
     }
 
+  resource function post admin/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
+        http:Response response = new;
+        json responseObj = {};
+        map<string> errorMsg = {};
+        boolean errorFlag = false;
+
+        if user.email is "" {
+            errorFlag = true;
+            errorMsg["email"] = utils:EMAIL_REQUIRED;
+        } else if !regex:matches(user.email, utils:EMAIL_REGEX) {
+            errorFlag = true;
+            errorMsg["email"] = utils:EMAIL_INVALID_FORMAT;
+        }
+
+        if user.password is "" {
+            errorFlag = true;
+            errorMsg["password"] = utils:PASSWORD_REQUIRED;
+        }
+
+        if errorFlag {
+            responseObj = {"success": false, "content": errorMsg.toJson()};
+        } else {
+            DBUser|sql:Error result = self.connection->queryRow(`SELECT * FROM admin WHERE email = ${user.email}`);
+            if result is DBUser {
+                boolean isPasswordValid = password:verifyHmac(user.password, result.password);
+                if isPasswordValid {
+                    UserDTO UserDTO = {
+                        first_name: result.first_name,
+                        last_name: result.last_name,
+                        email: result.email,
+                        userType: "admin"
+                    };
+                    string token = check jwt:generateJWT(UserDTO.toJsonString());
+                    responseObj = {"success": true, "content": "Successfully Signed In","token":token};
+                } else {
+                    responseObj = {"success": false, "content": "Invalid password"};
+                }
+            } else {
+                responseObj = {"success": false, "content": "User not found"};
+            }
+        }
+
+        response.setJsonPayload(responseObj);
+        return response;
+    }
 }
 
 service /data on clientEP {
