@@ -3,10 +3,14 @@ import QuickRoute.jwt;
 import QuickRoute.password;
 import QuickRoute.utils;
 
+import ballerina/data.jsondata;
 import ballerina/http;
+import ballerina/io;
 import ballerina/regex;
 import ballerina/sql;
+import ballerina/url;
 import ballerinax/mysql;
+import QuickRoute.time;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -87,7 +91,8 @@ service /auth on authEP {
                     first_name: user.first_name,
                     last_name: user.last_name,
                     email: user.email,
-                    userType: "user"
+                    userType: "user",
+                    expiryTime: time:expierTimeStamp()
                 };
                 string token = check jwt:generateJWT(UserDTO.toJsonString());
                 responseObj = {"success": true, "content": "Successfully Registered", "token": token};
@@ -129,9 +134,12 @@ service /auth on authEP {
                         first_name: result.first_name,
                         last_name: result.last_name,
                         email: result.email,
-                        userType: "user"
+                        userType: "user",
+                        expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
+                    io:println(token);
+                    io:println(url:decode(token, "UTF-8"));
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
@@ -175,7 +183,8 @@ service /auth on authEP {
                         first_name: result.first_name,
                         last_name: result.last_name,
                         email: result.email,
-                        userType: "admin"
+                        userType: "admin",
+                        expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
@@ -189,6 +198,14 @@ service /auth on authEP {
 
         response.setJsonPayload(responseObj);
         return response;
+    }
+
+    resource function get user/checkin/[string BALUSERTOKEN]() returns error? {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if payload.userType is "user" {
+            io:println(payload);
+        }
     }
 }
 

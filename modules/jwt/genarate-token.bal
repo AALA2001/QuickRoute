@@ -2,6 +2,7 @@ import ballerina/crypto;
 import ballerina/io;
 import ballerina/mime;
 import ballerina/regex;
+import ballerina/url;
 
 configurable string secret = ?;
 
@@ -18,7 +19,9 @@ public function generateJWT(json payload) returns error|string {
 
     byte[] hmacMd5 = check crypto:hmacMd5(signatureInput.toBytes(), secret.toBytes());
     string|byte[]|io:ReadableByteChannel encodedSignature = check mime:base64Encode(hmacMd5.toString());
-    return <string>(<string>encodedHeader + "." + <string>encodedPayload + "." + <string>encodedSignature);
+    string urlEncodedToken = check url:encode(<string>(<string>encodedHeader + "." + <string>encodedPayload + "." + <string>encodedSignature), "UTF-8");
+    return urlEncodedToken;
+
 }
 
 public function decodeJWT(string jwt) returns json|error {
