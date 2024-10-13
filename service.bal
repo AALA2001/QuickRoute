@@ -8,6 +8,7 @@ import QuickRoute.utils;
 
 import ballerina/http;
 import ballerina/io;
+import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
@@ -200,6 +201,8 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
+}
+
 service /data on adminEP {
 
     private final mysql:Client connection;
@@ -535,23 +538,66 @@ service /data on adminEP {
 
     resource function get admin/getLocations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
         http:Response response = new;
-        DBLocationDetails[] locations = [];
+        json[] locationWithReviews = [];
 
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
             return http:UNAUTHORIZED;
         }
 
-        stream<DBLocationDetails, sql:Error?> locationStream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type AS tour_type, destinations.title AS destination_title,country.name AS country_name FROM destination_location INNER JOIN tour_type ON tour_type.id=destination_location.tour_type_id INNER JOIN destinations ON destinations.id=destination_location.destinations_id INNER JOIN country  ON country.id = destinations.country_id`);
-        sql:Error? strwamError = locationStream.forEach(function(DBLocationDetails location) {
-            locations.push(location);
+        stream<DBLocationDetails, sql:Error?> locationStream = self.connection->query(`
+        SELECT destination_location.id AS location_id, 
+               destination_location.title, 
+               destination_location.image, 
+               destination_location.overview, 
+               tour_type.type AS tour_type, 
+               destinations.title AS destination_title, 
+               country.name AS country_name 
+        FROM destination_location 
+        INNER JOIN tour_type ON tour_type.id = destination_location.tour_type_id 
+        INNER JOIN destinations ON destinations.id = destination_location.destinations_id 
+        INNER JOIN country ON country.id = destinations.country_id
+    `);
+
+        sql:Error|() locationStreamError = locationStream.forEach(function(DBLocationDetails location) {
+            LocationReviewDetails[] reviews = [];
+
+            stream<LocationReviewDetails, sql:Error?> reviewStream = self.connection->query(`
+            SELECT ratings.id AS rating_id, 
+                   ratings.rating_count, 
+                   ratings.review_img, 
+                   ratings.review, 
+                   user.first_name, 
+                   user.last_name, 
+                   user.email 
+            FROM ratings 
+            INNER JOIN user ON user.id = ratings.user_id 
+            WHERE destination_location_id = ${location.location_id}
+        `);
+            sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
+                reviews.push(review);
+            });
+
+            if reviewStreamError is sql:Error {
+                return ();
+            }
+
+            json returnObject = {
+                location: location.toJson(),
+                reviews: reviews.toJson()
+            };
+            locationWithReviews.push(returnObject);
         });
-        if strwamError is sql:Error {
+
+        if locationStreamError is sql:Error {
             check locationStream.close();
             return utils:setErrorResponse(response, "Error in retrieving locations");
         }
+
+        check locationStream.close();
+
         response.setJsonPayload({
             "success": true,
-            "content": locations.toJson()
+            "content": locationWithReviews
         });
         return response;
     }
