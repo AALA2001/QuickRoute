@@ -11,7 +11,7 @@ import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
 
-http:ClientConfiguration clientEPConfig = {
+http:ClientConfiguration authEPConfig = {
     cookieConfig: {
         enabled: true
     }
@@ -198,3 +198,4 @@ service /auth on authEP {
         return response;
     }
 }
+

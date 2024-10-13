@@ -118,8 +118,34 @@ public type DBDestinationDetails record {|
     string country_name;
 |};
 
-public type RequestPassword record{|
+public type RequestPassword record {|
     string user_id;
     string new_password;
     string old_password;
 |};
+
+public type UserHasPlans record {|
+    int plan_id;
+    int user_id;
+    string plan_name;
+|};
+
+public type PlanRename record {|
+    int plan_id;
+    string new_name;
+|};
+
+public type siteReview record {|
+    string review;
+|};
+
+public type LocationReviewDetails record{|
+    int rating_id;
+    int rating_count;
+    string review_img;
+    string review;
+    string first_name;
+    string last_name;
+    string email;
+|};
+

@@ -1,8 +1,9 @@
-import ballerina/time;
+import ballerina/file;
+import ballerina/http;
 import ballerina/io;
 import ballerina/mime;
-import ballerina/http;
 import ballerina/regex;
+import ballerina/time;
 
 public function uploadImage(http:Request req, string path, string fileName) returns string|error {
     mime:Entity[] parts = check req.getBodyParts();
@@ -23,8 +24,8 @@ public function uploadImage(http:Request req, string path, string fileName) retu
                 string[] spliited = regex:split(currentTimeString, "\\.");
                 string timeMil = spliited[0] + "" + spliited[1];
 
-                string newFileName = fileName+"_" + timeMil + fileExtention;
-                string filePath = "./"+path + newFileName;
+                string newFileName = fileName + "_" + timeMil + fileExtention;
+                string filePath = "./" + path + newFileName;
                 byte[] fileContent = check part.getByteArray();
 
                 check io:fileWriteBytes(filePath, fileContent);
@@ -33,4 +34,16 @@ public function uploadImage(http:Request req, string path, string fileName) retu
         }
     }
     return error("No file found in the request");
+}
+
+public function deleteImageFile(string filePath) returns boolean|error {
+    boolean fileExists = check file:test(filePath, file:EXISTS);
+    if !fileExists {
+        return false;
+    }
+    error? result = file:remove(filePath);
+    if result is error {
+        return false;
+    }
+    return true;
 }
