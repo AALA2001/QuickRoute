@@ -63,7 +63,7 @@ service /clientData on clientSideEP {
 
     resource function get plan/allPlans/[string BALUSERTOKEN]() returns json|error|http:Response {
         http:Response backendResponse = new ();
-        json responseResult = response(false, "");
+        json responseResult = {};
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
