@@ -1,4 +1,5 @@
 import ballerina/time;
+
 public type Province record {|
     int id;
     string name;
@@ -115,4 +116,10 @@ public type DBDestinationDetails record {|
     string image;
     string description;
     string country_name;
+|};
+
+public type RequestPassword record{|
+    string user_id;
+    string new_password;
+    string old_password;
 |};
