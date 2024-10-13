@@ -138,3 +138,12 @@ public type PlanRename record {|
 public type siteReview record {|
     string review;
 |};
+
+public type wishlist record {|
+    int id;
+    int user_id;
+    int destination_location_id;
+|};
+public type removeWishList record {|
+    int destinations_id;
+|};

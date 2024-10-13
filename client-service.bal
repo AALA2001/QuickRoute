@@ -154,7 +154,7 @@ service /clientData on clientSideEP {
                 } else {
                     if destination is DBDestination {
                         if result is DBUser {
-                            _ = check self.connection->execute(`INSERT INTO wishlist (user_id,destination_location_id) VALUES (${destinations_id},${destination.id})`);
+                            _ = check self.connection->execute(`INSERT INTO wishlist (user_id,destination_location_id) VALUES (${result.id},${destination.id})`);
                             return response(true, "Destination added to wishlist successfully");
                         } else {
                             return response(false, "Query did not retrieve data");
@@ -162,6 +162,31 @@ service /clientData on clientSideEP {
                     } else {
                         return response(false, "Query did not retrieve data");
                     }
+                }
+            }
+        } else {
+            return response(false, "Token has expired");
+        }
+    }
+
+    resource function delete user/wishlist/removeDestination/[string BALUSERTOKEN](@http:Payload removeWishList RemoveDestination) returns json|error {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = check self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                return response(false, "user not found");
+            } else {
+                if result is DBUser {
+                    wishlist|sql:Error wishlistRow = check self.connection->queryRow(`SELECT * FROM wishlist WHERE user_id = (${result.id}) AND destination_location_id = ${RemoveDestination.destinations_id}`);
+                    if wishlistRow is sql:NoRowsError {
+                        return response(false, "Destination not found in wishlist");
+                    } else if wishlistRow is wishlist {
+                        _ = check self.connection->execute(`DELETE FROM wishlist WHERE user_id = ${result.id} AND destination_location_id = ${RemoveDestination.destinations_id}`);
+                        return response(true, "Destination removed from wishlist successfully");
+                    }
+                } else {
+                    return response(false, "Query did not retrieve data");
                 }
             }
         } else {
