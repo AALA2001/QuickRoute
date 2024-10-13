@@ -138,3 +138,14 @@ public type PlanRename record {|
 public type siteReview record {|
     string review;
 |};
+
+public type LocationReviewDetails record{|
+    int rating_id;
+    int rating_count;
+    string review_img;
+    string review;
+    string first_name;
+    string last_name;
+    string email;
+|};
+
