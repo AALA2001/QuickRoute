@@ -119,6 +119,26 @@ service /clientData on clientSideEP {
             return response(false, "Token has expired");
         }
     }
+
+    resource function post site/review/[string BALUSERTOKEN](@http:Payload siteReview SiteReview) returns json|error {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = check self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                return response(false, "user not found");
+            }else {
+                if result is DBUser {
+                    _ = check self.connection->execute(`INSERT INTO site_reviews (review, user_id) VALUES (${SiteReview.review},${result.id})`);
+                    return response(true, "Review added successfully");
+                }else {
+                    return response(false, "Query did not retrieve data");
+                }
+            }
+        }else {
+            return response(false, "Token has expired");
+        }
+    }
 }
 
 function response(boolean status, string message) returns json {

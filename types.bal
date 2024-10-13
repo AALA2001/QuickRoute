@@ -131,6 +131,11 @@ public type UserHasPlans record {|
 |};
 
 public type PlanRename record {|
-    int  plan_id;
+    int plan_id;
     string new_name;
+|};
+
+public type siteReview record {|
+    int user_id;
+    string review;
 |};
