@@ -14,3 +14,7 @@ public function validateImageFile(mime:Entity part) returns boolean {
     string|mime:ParserError contentType = part.getContentType();
     return contentType is string && string:startsWith(contentType, "image/");
 }
+
+public function response(boolean status, string message) returns json {
+    return {"success": status, "content": message};
+}
