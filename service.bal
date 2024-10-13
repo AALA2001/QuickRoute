@@ -218,9 +218,27 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
+
+    resource function get admin/checkin/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
+        json responseObj = {};
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if payload.userType is "admin" {
+            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+                responseObj = {"success": true, "content": "admin is active"};
+            } else {
+                responseObj = {"success": false, "content": "Session Expired"};
+            }
+        }
+        io:println(responseObj);
+        response.setJsonPayload(responseObj);
+        return response;
+    }
 }
 
 service /data on clientEP {
+
     private final mysql:Client connection;
 
     function init() returns error? {
@@ -231,7 +249,7 @@ service /data on clientEP {
         _ = checkpanic self.connection.close();
     }
 
-    resource function post admin/addDestination(http:Request req) returns http:Response|error? {
+ resource function post admin/addDestination(http:Request req) returns http:Response|error? {
         mime:Entity[] parts = check req.getBodyParts();
         http:Response response = new;
 
@@ -308,6 +326,7 @@ service /data on clientEP {
         }
         return response;
     }
+
 
     resource function post admin/addLocation(http:Request req) returns error|http:Response {
         mime:Entity[] parts = check req.getBodyParts();
