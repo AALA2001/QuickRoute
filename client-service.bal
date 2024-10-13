@@ -60,6 +60,40 @@ service /clientData on clientSideEP {
         backendResponse.setJsonPayload(responseResult);
         return backendResponse;
     }
+
+    resource function get plan/allPlans/[string BALUSERTOKEN]() returns json|error|http:Response {
+        http:Response backendResponse = new ();
+        json responseResult = response(false, "");
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = check self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                return response(false, "user not found");
+            } else if result is sql:Error {
+                return response(false, "Query did not retrieve data");
+            } else {
+                if result is DBUser {
+                    stream<UserHasPlans, sql:Error?> user_has_plans_stream = self.connection->query(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id}`);
+                    UserHasPlans[] QuickRouteUserHasPlans = [];
+                    check from UserHasPlans user_has_plan in user_has_plans_stream
+                        do {
+                            QuickRouteUserHasPlans.push(user_has_plan);
+                        };
+                    check user_has_plans_stream.close();
+                    responseResult = {success: true, plans: QuickRouteUserHasPlans.toJson()};
+                }
+            }
+        } else {
+            return response(false, "Token has expired");
+        }
+        backendResponse.setJsonPayload(responseResult);
+        return backendResponse;
+    }
+
+    resource function put plan/rename/[string BALUSERTOKEN](@http:Payload PlanRename newPlanName) returns json|error|http:Response{
+        
+    }
 }
 
 function response(boolean status, string message) returns json {
