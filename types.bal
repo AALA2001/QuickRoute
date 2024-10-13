@@ -136,6 +136,5 @@ public type PlanRename record {|
 |};
 
 public type siteReview record {|
-    int user_id;
     string review;
 |};
