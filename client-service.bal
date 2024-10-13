@@ -148,12 +148,20 @@ service /clientData on clientSideEP {
             if result is sql:NoRowsError {
                 return response(false, "user not found");
             } else {
-                int|sql:Error destination = check self.connection->queryRow(`SELECT * FROM destination_location WHERE id = (${destinations_id})`);
-                if result is DBUser {
-                    _ = check self.connection->execute(`INSERT INTO wishlist (user_id,destination_location_id) VALUES (${destinations_id},${result.id})`);
-                    return response(true, "Destination added to wishlist successfully");
+                DBDestination|sql:Error destination = check self.connection->queryRow(`SELECT * FROM destination_location WHERE id = (${destinations_id})`);
+                if destination is sql:NoRowsError {
+                    return response(false, "Destination not found");
                 } else {
-                    return response(false, "Query did not retrieve data");
+                    if destination is DBDestination {
+                        if result is DBUser {
+                            _ = check self.connection->execute(`INSERT INTO wishlist (user_id,destination_location_id) VALUES (${destinations_id},${destination.id})`);
+                            return response(true, "Destination added to wishlist successfully");
+                        } else {
+                            return response(false, "Query did not retrieve data");
+                        }
+                    } else {
+                        return response(false, "Query did not retrieve data");
+                    }
                 }
             }
         } else {
