@@ -1,4 +1,5 @@
 import QuickRoute.db;
+import QuickRoute.img;
 import QuickRoute.jwt;
 import QuickRoute.password;
 import QuickRoute.time;
@@ -7,12 +8,11 @@ import QuickRoute.utils;
 import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/io;
+import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
-import ballerina/mime;
-import QuickRoute.img;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -580,6 +580,52 @@ service /data on clientEP {
         });
         responseObject = {"success": true, "content": destinations.toJson()};
         response.setJsonPayload(responseObject);
+        return response;
+    }
+
+    resource function put admin/updatePassword(@http:Payload RequestPassword payload) returns http:Response|sql:Error {
+        http:Response response = new;
+        json responseObj = {};
+        map<string> errorMsg = {};
+        boolean errorFlag = false;
+
+        if payload.user_id is "" {
+            errorFlag = true;
+            errorMsg["user_id"] = "User ID required";
+        }
+        if payload.new_password is "" {
+            errorFlag = true;
+            errorMsg["new_pw"] = "New password required";
+        }
+        if payload.old_password is "" {
+            errorFlag = true;
+            errorMsg["old_pw"] = "Old password required";
+        }
+
+        if errorFlag {
+            responseObj = {"success": false, "content": errorMsg.toJson()};
+        } else {
+            DBUser|sql:Error result = self.connection->queryRow(`SELECT * FROM admin  WHERE id = ${payload.user_id}`);
+            if result is DBUser {
+                string passwordResult = result.password;
+                boolean isOldPwVerify = password:verifyHmac(payload.old_password, passwordResult);
+                if isOldPwVerify is true {
+                    string newHashedPw = password:generateHmac(payload.new_password);
+                    sql:ExecutionResult|sql:Error adminUpdatePw = self.connection->execute(`UPDATE admin SET password = ${newHashedPw} WHERE id  = ${payload.user_id}`);
+                    if adminUpdatePw is sql:ExecutionResult {
+                        responseObj = {"success": true, "content": "Password updated successfully"};
+                    } else {
+                        responseObj = {"success": false, "content": "SQL error"};
+                    }
+                } else {
+                    responseObj = {"success": false, "content": "Ivalid old password"};
+                }
+            } else {
+                responseObj = {"success": false, "content": "User not Found"};
+            }
+        }
+
+        response.setJsonPayload(responseObj);
         return response;
     }
 }
