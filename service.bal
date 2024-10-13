@@ -779,4 +779,127 @@ service /data on adminEP {
 
         return response;
     }
+
+    resource function put admin/updateOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+        mime:Entity[] parts = check req.getBodyParts();
+        http:Response response = new;
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return http:UNAUTHORIZED;
+        }
+
+        if !utils:validateContentType(req) {
+            return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
+        }
+        if parts.length() == 0 {
+            return utils:setErrorResponse(response, "Request body is empty");
+        }
+        string offerId = "";
+        string fromDate = "";
+        string title = "";
+        string toDate = "";
+        string locationId = "";
+        boolean isImageInclude = false;
+        foreach mime:Entity part in parts {
+            string? dispositionName = part.getContentDisposition().name;
+            string|mime:ParserError text = part.getText();
+            if dispositionName is "offerId" {
+                if text is string {
+                    offerId = text;
+                }
+            } else if dispositionName is "fromDate" {
+                if text is string {
+                    fromDate = text;
+                }
+            } else if dispositionName is "title" {
+                if text is string {
+                    title = text;
+                }
+            } else if dispositionName is "toDate" {
+                if text is string {
+                    toDate = text;
+                }
+            } else if dispositionName is "locationId" {
+                if text is string {
+                    locationId = text;
+                }
+            } else if dispositionName is "file" {
+                if !utils:validateImageFile(part) {
+                    return utils:setErrorResponse(response, "Invalid or unsupported image file type");
+                }
+                isImageInclude = true;
+            }
+        }
+
+        if offerId is "" {
+            return utils:setErrorResponse(response, "Offer ID is required");
+        }
+
+        DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM offers WHERE id=${offerId}`);
+        if offerResult is sql:NoRowsError {
+            return utils:setErrorResponse(response, "Offer not found");
+        } else if offerResult is sql:Error {
+            return utils:setErrorResponse(response, "Error in retrieving offer");
+        }
+
+        if offerResult is DBOffer {
+            sql:ParameterizedQuery[] setClauses = [];
+            if locationId != "" {
+                setClauses.push(<sql:ParameterizedQuery>`destination_location_id = ${locationId}`);
+            }
+            if title != "" {
+                setClauses.push(`title = ${title}`);
+            }
+            if fromDate != "" {
+                boolean isValidFromDate = regex:matches(fromDate, utils:DATETIME_REGEX);
+                if isValidFromDate !is true {
+                    return utils:setErrorResponse(response, "Invalid date format");
+                }
+                setClauses.push(<sql:ParameterizedQuery>`from_Date = ${fromDate}`);
+            }
+            if toDate != "" {
+                boolean isValidToDate = regex:matches(toDate, utils:DATETIME_REGEX);
+                if isValidToDate !is true {
+                    return utils:setErrorResponse(response, "Invalid date format");
+                }
+                setClauses.push(<sql:ParameterizedQuery>`to_Date = ${toDate}`);
+            }
+            if isImageInclude {
+                boolean|error isDeleteImage = img:deleteImageFile(offerResult.image);
+                if isDeleteImage is false || isDeleteImage is error {
+                    return utils:setErrorResponse(response, "Error in deleting image");
+                }
+                string imageName = title != "" ? title : offerResult.title;
+                string|error uploadedImage = img:uploadImage(req, "uploads/offers/", imageName);
+
+                if uploadedImage is error {
+                    return utils:setErrorResponse(response, "Error in uploading image");
+                }
+                setClauses.push(<sql:ParameterizedQuery>`image = ${uploadedImage}`);
+            }
+
+            if setClauses.length() > 0 {
+                sql:ParameterizedQuery setPart = ``;
+                boolean isFirst = true;
+                foreach sql:ParameterizedQuery clause in setClauses {
+                    if !isFirst {
+                        setPart = sql:queryConcat(setPart, `, `, clause);
+                    } else {
+                        setPart = sql:queryConcat(setPart, clause);
+                        isFirst = false;
+                    }
+                }
+                sql:ParameterizedQuery queryConcat = sql:queryConcat(`UPDATE offers SET `, setPart, ` WHERE id = ${offerId} `);
+                sql:ExecutionResult|sql:Error updateResult = self.connection->execute(queryConcat);
+                if updateResult is sql:Error {
+                    return utils:setErrorResponse(response, "Error in updating offer");
+                }
+                response.setJsonPayload({"success": true, "content": "Successfully updated the offer"});
+            } else {
+                return utils:setErrorResponse(response, "No valid fields to update");
+            }
+        }
+        return response;
+    }
+
 }
