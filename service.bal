@@ -902,4 +902,118 @@ service /data on adminEP {
         return response;
     }
 
+    resource function put admin/updateLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+        mime:Entity[] parts = check req.getBodyParts();
+        http:Response response = new;
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return http:UNAUTHORIZED;
+        }
+
+        if !utils:validateContentType(req) {
+            return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
+        }
+        if parts.length() == 0 {
+            return utils:setErrorResponse(response, "Request body is empty");
+        }
+        string locationId = "";
+        string tourTypeId = "";
+        string title = "";
+        string overview = "";
+        string destinationId = "";
+        boolean isImageInclude = false;
+        foreach mime:Entity part in parts {
+            string? dispositionName = part.getContentDisposition().name;
+            string|mime:ParserError text = part.getText();
+            if dispositionName is "locationId" {
+                if text is string {
+                    locationId = text;
+                }
+            } else if dispositionName is "tourTypeId" {
+                if text is string {
+                    tourTypeId = text;
+                }
+            } else if dispositionName is "title" {
+                if text is string {
+                    title = text;
+                }
+            } else if dispositionName is "overview" {
+                if text is string {
+                    overview = text;
+                }
+            } else if dispositionName is "destinationId" {
+                if text is string {
+                    destinationId = text;
+                }
+            } else if dispositionName is "file" {
+                if !utils:validateImageFile(part) {
+                    return utils:setErrorResponse(response, "Invalid or unsupported image file type");
+                }
+                isImageInclude = true;
+            }
+        }
+
+        if locationId is "" {
+            return utils:setErrorResponse(response, "Location ID is required");
+        }
+
+        DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${locationId}`);
+        if locationResult is sql:NoRowsError {
+            return utils:setErrorResponse(response, "Destination location not found");
+        } else if locationResult is sql:Error {
+            return utils:setErrorResponse(response, "Error in retrieving destination location");
+        }
+
+        if locationResult is DBLocation {
+            sql:ParameterizedQuery[] setClauses = [];
+            if overview != "" {
+                setClauses.push(<sql:ParameterizedQuery>`overview = ${overview}`);
+            }
+            if title != "" {
+                setClauses.push(`title = ${title}`);
+            }
+            if tourTypeId != "" {
+                setClauses.push(<sql:ParameterizedQuery>`tour_type_id = ${tourTypeId}`);
+            }
+            if tourTypeId != "" {
+                setClauses.push(<sql:ParameterizedQuery>`destinations_id = ${destinationId}`);
+            }
+            if isImageInclude {
+                boolean|error isDeleteImage = img:deleteImageFile(locationResult.image);
+                if isDeleteImage is false || isDeleteImage is error {
+                    return utils:setErrorResponse(response, "Error in deleting image");
+                }
+                string imageName = title != "" ? title : locationResult.title;
+                string|error uploadedImage = img:uploadImage(req, "uploads/locations/", imageName);
+
+                if uploadedImage is error {
+                    return utils:setErrorResponse(response, "Error in uploading image");
+                }
+                setClauses.push(<sql:ParameterizedQuery>`image = ${uploadedImage}`);
+            }
+
+            if setClauses.length() > 0 {
+                sql:ParameterizedQuery setPart = ``;
+                boolean isFirst = true;
+                foreach sql:ParameterizedQuery clause in setClauses {
+                    if !isFirst {
+                        setPart = sql:queryConcat(setPart, `, `, clause);
+                    } else {
+                        setPart = sql:queryConcat(setPart, clause);
+                        isFirst = false;
+                    }
+                }
+                sql:ParameterizedQuery queryConcat = sql:queryConcat(`UPDATE destination_location SET `, setPart, ` WHERE id = ${locationId} `);
+                sql:ExecutionResult|sql:Error updateResult = self.connection->execute(queryConcat);
+                if updateResult is sql:Error {
+                    return utils:setErrorResponse(response, "Error in updating destination location");
+                }
+                response.setJsonPayload({"success": "Successfully updated the destination location"});
+            } else {
+                return utils:setErrorResponse(response, "No valid fields to update");
+            }
+        }
+        return response;
+    }
+
 }
