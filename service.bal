@@ -12,6 +12,7 @@ import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
+import ballerina/mime;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -200,6 +201,7 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
+}
 service /data on adminEP {
 
     private final mysql:Client connection;
