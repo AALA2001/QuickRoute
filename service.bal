@@ -6,10 +6,8 @@ import QuickRoute.password;
 import QuickRoute.time;
 import QuickRoute.utils;
 
-import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/io;
-import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
@@ -202,42 +200,6 @@ service /auth on authEP {
         response.setJsonPayload(responseObj);
         return response;
     }
-
-    resource function get user/checkin/[string BALUSERTOKEN]() returns error|http:Response {
-        http:Response response = new;
-        json responseObj = {};
-        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
-        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
-        if payload.userType is "user" {
-            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
-                responseObj = {"success": true, "content": "User is active"};
-            } else {
-                responseObj = {"success": false, "content": "Session Expired"};
-            }
-        }
-        io:println(responseObj);
-        response.setJsonPayload(responseObj);
-        return response;
-    }
-
-    resource function get admin/checkin/[string BALUSERTOKEN]() returns error|http:Response {
-        http:Response response = new;
-        json responseObj = {};
-        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
-        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
-        if payload.userType is "admin" {
-            if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
-                responseObj = {"success": true, "content": "admin is active"};
-            } else {
-                responseObj = {"success": false, "content": "Session Expired"};
-            }
-        }
-        io:println(responseObj);
-        response.setJsonPayload(responseObj);
-        return response;
-    }
-}
-
 service /data on adminEP {
 
     private final mysql:Client connection;
