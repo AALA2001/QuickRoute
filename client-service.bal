@@ -129,7 +129,7 @@ service /clientData on clientSideEP {
                 return response(false, "user not found");
             }else {
                 if result is DBUser {
-                    _ = check self.connection->execute(`INSERT INTO site_reviews (review, user_id) VALUES (${SiteReview.review},${result.id})`);
+                    _ = check self.connection->execute(`INSERT INTO reviews (review, user_id) VALUES (${SiteReview.review},${result.id})`);
                     return response(true, "Review added successfully");
                 }else {
                     return response(false, "Query did not retrieve data");
