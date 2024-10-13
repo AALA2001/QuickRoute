@@ -1,12 +1,12 @@
 import QuickRoute.db;
 import QuickRoute.jwt;
 import QuickRoute.time;
+import QuickRoute.utils;
 
 import ballerina/data.jsondata;
 import ballerina/http;
 import ballerina/sql;
 import ballerinax/mysql;
-import QuickRoute.utils;
 
 listener http:Listener clientSideEP = new (9093);
 
@@ -188,6 +188,40 @@ service /clientData on clientSideEP {
                     }
                 } else {
                     return utils:response(false, "Query did not retrieve data");
+                }
+            }
+        } else {
+            return utils:response(false, "Token has expired");
+        }
+    }
+
+    resource function get plan/userPlan/addDestination/[string BALUSERTOKEN](int plan_id, int destination_id) returns json|error {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = check self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                return utils:response(false, "user not found");
+            } else {
+                if result is DBUser {
+                    DBLocation|sql:Error destination = check self.connection->queryRow(`SELECT * FROM destination_location WHERE id = (${destination_id})`);
+                    if destination is sql:NoRowsError {
+                        return utils:response(false, "Destination not found");
+                    } else if destination is DBLocation {
+                        DBPlan|sql:Error plan = check self.connection->queryRow(`SELECT * FROM trip_plan  WHERE id = (${plan_id})`);
+                        if plan is sql:NoRowsError {
+                            return utils:response(false, "Plan not found");
+                        } else if plan is DBPlan {
+                            sql:ExecutionResult|sql:Error users_trip_des = self.connection->execute(`INSERT INTO users_trip_des (destination_location_id) VALUES ${destination_id}`);
+                            if users_trip_des is sql:Error {
+                                return utils:response(false, "Failed to add destination to plan");
+                                } else {
+                                    int users_trip_des_id =<int> users_trip_des.lastInsertId;
+                                    _ = check self.connection->execute(`INSERT INTO plan_has_des (trip_plan_id,users_trip_des_id) VALUES  (${plan_id},${users_trip_des_id})`);
+                                    return utils:response(true, "Destination added to plan successfully");
+                                }
+                        }
+                    }
                 }
             }
         } else {

@@ -144,6 +144,12 @@ public type wishlist record {|
     int user_id;
     int destination_location_id;
 |};
+
 public type removeWishList record {|
     int destinations_id;
+|};
+
+public type DBPlan record {|
+    int id;
+    string plan_name;
 |};
