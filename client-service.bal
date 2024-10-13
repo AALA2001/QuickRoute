@@ -74,7 +74,7 @@ service /clientData on clientSideEP {
                 return response(false, "Query did not retrieve data");
             } else {
                 if result is DBUser {
-                    stream<UserHasPlans, sql:Error?> user_has_plans_stream = self.connection->query(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id}`);
+                    stream<UserHasPlans, sql:Error?> user_has_plans_stream = self.connection->query(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name,user_id FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id}`);
                     UserHasPlans[] QuickRouteUserHasPlans = [];
                     check from UserHasPlans user_has_plan in user_has_plans_stream
                         do {
@@ -102,6 +102,17 @@ service /clientData on clientSideEP {
                 return response(false, "Query did not retrieve data");
             } else {
                 if result is DBUser {
+                    UserHasPlans|sql:Error tripPlanResult = check self.connection->queryRow(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name,user_id FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id} AND trip_plan_id = ${newPlanName.plan_id}`);
+                    if tripPlanResult is sql:NoRowsError {
+                        return response(false, "Plan not found");
+                    }else if tripPlanResult is sql:Error {
+                            return response(false, "Query did not retrieve data");
+                    }else{
+                        if tripPlanResult is UserHasPlans {
+                            _ = check self.connection->execute(`UPDATE trip_plan SET plan_name = (${newPlanName.new_name}) WHERE id = ${newPlanName.plan_id}`);
+                            return response(true, "Plan name updated successfully");
+                        }
+                    }
                 }
             }
         } else {

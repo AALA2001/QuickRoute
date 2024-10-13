@@ -126,6 +126,7 @@ public type RequestPassword record {|
 
 public type UserHasPlans record {|
     int plan_id;
+    int user_id;
     string plan_name;
 |};
 
