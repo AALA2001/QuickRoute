@@ -7,10 +7,8 @@ import QuickRoute.time;
 import QuickRoute.utils;
 
 import ballerina/http;
-import ballerina/io;
 import ballerina/regex;
 import ballerina/sql;
-import ballerina/url;
 import ballerinax/mysql;
 import ballerina/mime;
 
@@ -140,8 +138,6 @@ service /auth on authEP {
                         expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    io:println(token);
-                    io:println(url:decode(token, "UTF-8"));
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
