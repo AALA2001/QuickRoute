@@ -33,16 +33,6 @@ public type LoginUser record {|
     string password;
 |};
 
-public type Destination record {|
-    int id;
-    string title;
-    string productId;
-    string productSlug;
-    string taxonomySlug;
-    string cityUfi;
-    string cityName;
-    string countryCode;
-|};
 
 public type DBCountry record {|
     int id;
@@ -139,6 +129,20 @@ public type siteReview record {|
     string review;
 |};
 
+public type wishlist record {|
+    int id;
+    int user_id;
+    int destination_location_id;
+|};
+
+public type removeWishList record {|
+    int destinations_id;
+|};
+
+public type DBPlan record {|
+    int id;
+    string plan_name;
+|};
 public type LocationReviewDetails record{|
     int rating_id;
     int rating_count;
@@ -148,4 +152,3 @@ public type LocationReviewDetails record{|
     string last_name;
     string email;
 |};
-
