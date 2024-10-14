@@ -9,6 +9,7 @@ import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerinax/mysql;
+import ballerina/io;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -35,6 +36,30 @@ service /data on adminEP {
 
     function __deinit() returns sql:Error? {
         _ = checkpanic self.connection.close();
+    }
+
+    resource function get admin/getCountries/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
+        http:Response response = new;
+        DBCountry[] countries = [];
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return http:UNAUTHORIZED;
+        }
+
+        stream<DBCountry, sql:Error?> countryStream = self.connection->query(`SELECT * FROM country`);
+        sql:Error? streamError = countryStream.forEach(function(DBCountry country) {
+            countries.push(country);
+        });
+        io:println(streamError);
+        if streamError is sql:Error {
+            check countryStream.close();
+            return utils:setErrorResponse(response, "Error in retrieving countries");
+        }
+        response.setJsonPayload({
+            "success": true,
+            "content": countries.toJson()
+        });
+        return response;
     }
 
     resource function post admin/addDestination/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|http:Response|error? {
@@ -105,7 +130,7 @@ service /data on adminEP {
 
         DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE title = ${title} AND country_id=${countryId}`);
         if desResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "uploads/destinations/", title);
+            string|error uploadedImagePath = img:uploadImage(req, "destinations/", title);
             if uploadedImagePath !is string {
                 return utils:setErrorResponse(response, "Error in uploading image");
             }
@@ -200,7 +225,7 @@ service /data on adminEP {
 
         DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM  destination_location WHERE title=${title} AND destinations_id=${destinationId}`);
         if locationResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "uploads/locations/", title);
+            string|error uploadedImagePath = img:uploadImage(req, "locations/", title);
             if uploadedImagePath !is string {
                 return utils:setErrorResponse(response, "Error in uploading image");
             }
@@ -297,7 +322,7 @@ service /data on adminEP {
 
         DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM  offers WHERE title=${title} AND destination_location_id=${destinationLocationId} AND to_Date=${toDate} AND from_Date=${fromDate}`);
         if offerResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "uploads/offers/", title);
+            string|error uploadedImagePath = img:uploadImage(req, "offers/", title);
             if uploadedImagePath !is string {
                 return utils:setErrorResponse(response, "Error in uploading image");
             } else {
@@ -569,7 +594,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : desResult.title;
-                string|error uploadedImage = img:uploadImage(req, "uploads/destinations/", imageName);
+                string|error uploadedImage = img:uploadImage(req, "destinations/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
@@ -692,7 +717,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : offerResult.title;
-                string|error uploadedImage = img:uploadImage(req, "uploads/offers/", imageName);
+                string|error uploadedImage = img:uploadImage(req, "offers/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
@@ -806,7 +831,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : locationResult.title;
-                string|error uploadedImage = img:uploadImage(req, "uploads/locations/", imageName);
+                string|error uploadedImage = img:uploadImage(req, "locations/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
