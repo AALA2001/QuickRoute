@@ -246,7 +246,7 @@ service /clientData on clientSideEP {
         if (QuickRouteDestination.length() == 0) {
             return utils:response(true, "No destinations found");
         } else {
-            return {success: true, plans: QuickRouteDestination.toJson()};
+            return {success: true, destinations: QuickRouteDestination.toJson()};
         }
     }
 
