@@ -28,7 +28,19 @@ public enum PASSWORD_ERRORS {
     PASSWORD_REQUIRED = "Password is required"
 }
 
-public enum CONTENT_TYPES {
-    MULTIPART_FORM_DATA = "multipart/form-data"
+public enum COMMON_ERROR_MESSAGES {
+    UNAUTHORIZED_REQUEST = "Unauthorized Request",
+    INVALID_CONTENT_TYPE = "Invalid Content Type",
+    INVALID_MULTIPART_REQUEST = "Invalid multipart request",
+    REQUIRED_FIELDS_MISSING = "Required fields are missing"
+}
+
+public enum DESTINATION_ERRORS {
+    INVALID_COUNTRY_ID = "Invalid country id",
+    COUNTRY_NOT_FOUND = "Country not found",
+    ERROR_FETCHING_COUNTRY = "Error in fetching country",
+    ERROR_UPLOADING_IMAGE = "Error in uploading image",
+    ERROR_FETCHING_DESTINATION = "Error in fetching destination",
+    DESTINATION_ALREADY_EXISTS = "Destination already exists"
 }
 
