@@ -25,7 +25,7 @@ public function uploadImage(http:Request req, string path, string fileName) retu
                 string timeMil = spliited[0] + "" + spliited[1];
 
                 string newFileName = fileName + "_" + timeMil + fileExtention;
-                string filePath = "./" + path + newFileName;
+                string filePath = "./uploads/" + path + newFileName;
                 byte[] fileContent = check part.getByteArray();
 
                 check io:fileWriteBytes(filePath, fileContent);
