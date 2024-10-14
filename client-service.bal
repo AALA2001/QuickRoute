@@ -234,9 +234,11 @@ service /clientData on clientSideEP {
     }
 
     resource function get destination(string title, string country) returns json|error {
-        stream<DBDestination, sql:Error?> dbDestination_stream = self.connection->query(`SELECT * FROM destinations`);
-        DBDestination[] QuickRouteDestination = [];
-        check from DBDestination dbDestination in dbDestination_stream
+        string likeTitle =  "%"+title+"%";
+        string likeCountry =  "%"+country+"%";
+        stream<DBDestinationDetails, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destinations.id AS destination_id , title,image,description,country.name AS country_name FROM destinations INNER JOIN country ON destinations.country_id = country.id WHERE destinations.title LIKE ${likeTitle} or country.name LIKE ${likeCountry}`);
+        DBDestinationDetails[] QuickRouteDestination = [];
+        check from DBDestinationDetails dbDestination in dbDestination_stream
             do {
                 QuickRouteDestination.push(dbDestination);
             };
