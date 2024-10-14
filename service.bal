@@ -10,13 +10,14 @@ import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
+import ballerina/mime;
 
 http:ClientConfiguration authEPConfig = {
     cookieConfig: {
         enabled: true
     }
 };
-listener http:Listener authEP = new (9091);
+listener http:Listener mainEP = new (9091);
 
 @http:ServiceConfig {
     cors: {
@@ -25,7 +26,23 @@ listener http:Listener authEP = new (9091);
         allowCredentials: true
     }
 }
-service /auth on authEP {
+service / on mainEP {
+      resource function get [string folderName]/[string imageName]() returns http:Response|error {
+        string imagePath = "uploads/"+folderName + "/" + imageName;
+        byte[] imageContent = check io:fileReadBytes(imagePath);
+        http:Response res = new;
+        res.setPayload(imageContent);
+        if (imageName.endsWith(".png")) {
+            res.setHeader(http:CONTENT_TYPE, mime:IMAGE_PNG.toString());
+        } else if (imageName.endsWith(".jpg") || imageName.endsWith(".jpeg")) {
+            res.setHeader(http:CONTENT_TYPE, mime:IMAGE_JPEG.toString());
+        } else {
+            res.setHeader(http:CONTENT_TYPE, "application/octet-stream");
+        }
+        return res;
+    }
+}
+service /auth on mainEP {
     private final mysql:Client connection;
 
     function init() returns error? {
