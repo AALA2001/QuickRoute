@@ -5,11 +5,11 @@ import QuickRoute.password;
 import QuickRoute.utils;
 
 import ballerina/http;
+import ballerina/io;
 import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerinax/mysql;
-import ballerina/io;
 
 http:ClientConfiguration clientEPConfig = {
     cookieConfig: {
@@ -62,86 +62,58 @@ service /data on adminEP {
         return response;
     }
 
-    resource function post admin/addDestination/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|http:Response|error? {
-        mime:Entity[] parts = check req.getBodyParts();
-        http:Response response = new;
+    resource function post admin/addDestination/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
+        http:Response res = new;
+        map<any> formData = {};
 
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
-            return http:UNAUTHORIZED;
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
         }
 
-        if !utils:validateContentType(req) {
-            return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
-        }
-        if parts.length() == 0 {
-            return utils:setErrorResponse(response, "Request body is empty");
+        if !utils:validateContent(req.getContentType()) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
         }
 
-        string countryId = "";
-        string title = "";
-        string description = "";
-        boolean isImageInclude = false;
-        foreach mime:Entity part in parts {
-            string? dispositionName = part.getContentDisposition().name;
-            string|mime:ParserError text = part.getText();
-            if dispositionName is "country_id" {
-                if text is string {
-                    countryId = text;
-                } else {
-                    return utils:setErrorResponse(response, "Error in retrieving country_id field");
-                }
-            } else if dispositionName is "title" {
-                if text is string {
-                    title = text;
-                } else {
-                    return utils:setErrorResponse(response, "Error in retrieving title field");
-                }
-            } else if dispositionName is "description" {
-                if text is string {
-                    description = text;
-                } else {
-                    return utils:setErrorResponse(response, "Error in retrieving description field");
-                }
-            } else if dispositionName is "file" {
-                if !utils:validateImageFile(part) {
-                    return utils:setErrorResponse(response, "Invalid or unsupported image file type");
-                }
-                isImageInclude = true;
-            }
+        map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
+        if multipartFormData is error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_MULTIPART_REQUEST);
         }
 
-        if countryId is "" || title is "" || description is "" {
-            return utils:setErrorResponse(response, "Parameters are empty");
+        if !formData.hasKey("country_id") || !formData.hasKey("title") || !formData.hasKey("description") || !formData.hasKey("file") {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:REQUIRED_FIELDS_MISSING);
         }
-        if !isImageInclude {
-            return utils:setErrorResponse(response, "Image is required");
-        }
+
+        string countryId = <string>formData["country_id"];
+        string title = <string>formData["title"];
+        string description = <string>formData["description"];
 
         if int:fromString(countryId) !is int {
-            return utils:setErrorResponse(response, "Invalid type country id");
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_COUNTRY_ID);
         }
 
         DBCountry|sql:Error countryResult = self.connection->queryRow(`SELECT * FROM country WHERE id=${countryId}`);
         if countryResult is sql:NoRowsError {
-            return utils:setErrorResponse(response, "Country not found");
+            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:COUNTRY_NOT_FOUND);
         } else if countryResult is sql:Error {
-            return utils:setErrorResponse(response, "Error in retrieving country");
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_COUNTRY);
         }
 
-        DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE title = ${title} AND country_id=${countryId}`);
-        if desResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "destinations/", title);
-            if uploadedImagePath !is string {
-                return utils:setErrorResponse(response, "Error in uploading image");
+        DBDestination|sql:Error destinationResult = self.connection->queryRow(`SELECT * FROM destinations WHERE title = ${title} AND country_id=${countryId}`);
+        if destinationResult is sql:NoRowsError {
+            if formData["file"] is byte[] {
+                string|error|io:Error? uploadImagee = img:uploadImagee(<byte[]>formData["file"], "destinations/", title);
+                if uploadImagee is io:Error || uploadImagee is error {
+                    return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_UPLOADING_IMAGE);
+                }
+                _ = check self.connection->execute(`INSERT INTO destinations (title, country_id, image, description) VALUES (${title}, ${countryId}, ${uploadImagee}, ${description})`);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, "Successfully created destination", true);
             }
-            _ = check self.connection->execute(`INSERT INTO destinations (title, country_id, image, description) VALUES (${title}, ${countryId}, ${uploadedImagePath}, ${description})`);
-            response.setJsonPayload({"success": true, "content": "Successfully uploaded destination"});
-        } else if desResult is sql:Error {
-            return utils:setErrorResponse(response, "Error in retrieving destination");
+        } else if destinationResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION);
         } else {
-            return utils:setErrorResponse(response, "Destination already exists");
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CONFLICT, utils:DESTINATION_ALREADY_EXISTS);
         }
-        return response;
+        return res;
     }
 
     resource function post admin/addLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
@@ -225,7 +197,7 @@ service /data on adminEP {
 
         DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM  destination_location WHERE title=${title} AND destinations_id=${destinationId}`);
         if locationResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "locations/", title);
+            string|error|io:Error? uploadedImagePath = img:uploadImage(req, "locations/", title);
             if uploadedImagePath !is string {
                 return utils:setErrorResponse(response, "Error in uploading image");
             }
@@ -322,7 +294,7 @@ service /data on adminEP {
 
         DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM  offers WHERE title=${title} AND destination_location_id=${destinationLocationId} AND to_Date=${toDate} AND from_Date=${fromDate}`);
         if offerResult is sql:NoRowsError {
-            string|error uploadedImagePath = img:uploadImage(req, "offers/", title);
+            string|error|io:Error? uploadedImagePath = img:uploadImage(req, "offers/", title);
             if uploadedImagePath !is string {
                 return utils:setErrorResponse(response, "Error in uploading image");
             } else {
@@ -594,7 +566,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : desResult.title;
-                string|error uploadedImage = img:uploadImage(req, "destinations/", imageName);
+                string|error|io:Error? uploadedImage = img:uploadImage(req, "destinations/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
@@ -717,7 +689,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : offerResult.title;
-                string|error uploadedImage = img:uploadImage(req, "offers/", imageName);
+                string|error|io:Error? uploadedImage = img:uploadImage(req, "offers/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
@@ -831,7 +803,7 @@ service /data on adminEP {
                     return utils:setErrorResponse(response, "Error in deleting image");
                 }
                 string imageName = title != "" ? title : locationResult.title;
-                string|error uploadedImage = img:uploadImage(req, "locations/", imageName);
+                string|error|io:Error? uploadedImage = img:uploadImage(req, "locations/", imageName);
 
                 if uploadedImage is error {
                     return utils:setErrorResponse(response, "Error in uploading image");
