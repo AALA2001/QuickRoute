@@ -82,7 +82,11 @@ service /clientData on clientSideEP {
                             QuickRouteUserHasPlans.push(user_has_plan);
                         };
                     check user_has_plans_stream.close();
-                    responseResult = {success: true, plans: QuickRouteUserHasPlans.toJson()};
+                    if (QuickRouteUserHasPlans.length() == 0) {
+                        responseResult = {success: true, message: "No plans found"};
+                    } else {
+                        responseResult = {success: true, plans: QuickRouteUserHasPlans.toJson()};
+                    }
                 }
             }
         } else {
@@ -215,11 +219,11 @@ service /clientData on clientSideEP {
                             sql:ExecutionResult|sql:Error users_trip_des = self.connection->execute(`INSERT INTO users_trip_des (destination_location_id) VALUES ${destination_id}`);
                             if users_trip_des is sql:Error {
                                 return utils:response(false, "Failed to add destination to plan");
-                                } else {
-                                    int users_trip_des_id =<int> users_trip_des.lastInsertId;
-                                    _ = check self.connection->execute(`INSERT INTO plan_has_des (trip_plan_id,users_trip_des_id) VALUES  (${plan_id},${users_trip_des_id})`);
-                                    return utils:response(true, "Destination added to plan successfully");
-                                }
+                            } else {
+                                int users_trip_des_id = <int>users_trip_des.lastInsertId;
+                                _ = check self.connection->execute(`INSERT INTO plan_has_des (trip_plan_id,users_trip_des_id) VALUES  (${plan_id},${users_trip_des_id})`);
+                                return utils:response(true, "Destination added to plan successfully");
+                            }
                         }
                     }
                 }
@@ -228,5 +232,21 @@ service /clientData on clientSideEP {
             return utils:response(false, "Token has expired");
         }
     }
+
+    resource function get destination(string title, string country) returns json|error {
+        stream<DBDestination, sql:Error?> dbDestination_stream = self.connection->query(`SELECT * FROM destinations`);
+        DBDestination[] QuickRouteDestination = [];
+        check from DBDestination dbDestination in dbDestination_stream
+            do {
+                QuickRouteDestination.push(dbDestination);
+            };
+        check dbDestination_stream.close();
+        if (QuickRouteDestination.length() == 0) {
+            return utils:response(true, "No destinations found");
+        } else {
+            return {success: true, plans: QuickRouteDestination.toJson()};
+        }
+    }
+
 }
 
