@@ -143,3 +143,12 @@ public type DBPlan record {|
     int id;
     string plan_name;
 |};
+public type LocationReviewDetails record{|
+    int rating_id;
+    int rating_count;
+    string review_img;
+    string review;
+    string first_name;
+    string last_name;
+    string email;
+|};
