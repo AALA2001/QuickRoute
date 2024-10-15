@@ -41,6 +41,33 @@ public enum DESTINATION_ERRORS {
     ERROR_FETCHING_COUNTRY = "Error in fetching country",
     ERROR_UPLOADING_IMAGE = "Error in uploading image",
     ERROR_FETCHING_DESTINATION = "Error in fetching destination",
-    DESTINATION_ALREADY_EXISTS = "Destination already exists"
+    DESTINATION_ALREADY_EXISTS = "Destination already exists",
+    IMAGE_DELETE = "Error deleting image",
+    IMAGE_UPLOAD = "Error uploading image",
+    DATABASE_ERROR = "Database error",
+    DESTINATION_UPDATED = "Destination updated successfully",
+    DESTINATION_NO_FIELD= "No fields to update",
+    DESTINATION_SUCCESS = "Successfully created destination location"
 }
 
+public enum LOCATION_ERRORS {
+    INVALID_DESTINATION_TOUTYPE_ID = "Invalid destination location and tour type Id",
+    DESTINATION_NOT_FOUND = "Destination not found",
+    TOURTYPE_NOT_FOUND = "Tour type not found",
+    ERROR_FETCHING_TOURTYPE = "Error in fetching tour type",
+    ERROR_FETCHING_DESTINATION = "Error in fetching destination",
+    ERROR_UPLOADING_IMAGE = "Error in uploading image",
+    DESTINATION_ALREADY_EXISTS = "Destination already exists",
+    ERROR_FETCHING_DESTINATION_LOCATION = "Error in fetching destination location",
+    DESTINATION_LOCATION_ALREADY_EXISTS = "Destination location already exists",
+    LOCATION_SUCCESS = "Successfully created destination location"
+}
+
+public enum OFFER_ERRORS {
+    INVALID_DESTINATION_LOCATION_ID = "Invalid destination location",
+    INVALID_DATETIME_FROMAT = "Invalid datetime format",
+    DESTINATION_LOCATION_NOT_FOUND = "Destination location not found",
+    OFFER_ALREADY_EXISTS = "Offer already exists",
+    ERROR_FETCHING_OFFERS = "Error in fetching offers",
+    OFFER_SUCCESS = "Successfully created offer"
+}
