@@ -6,6 +6,7 @@ import QuickRoute.utils;
 
 import ballerina/http;
 import ballerina/io;
+import ballerina/regex;
 // import ballerina/mime;
 // import ballerina/regex;
 import ballerina/sql;
@@ -70,7 +71,7 @@ service /data on adminEP {
             return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
         }
 
-        if !utils:validateContent(req.getContentType()) {
+        if !utils:validateContentType(req.getContentType()) {
             return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
         }
 
@@ -106,7 +107,7 @@ service /data on adminEP {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_UPLOADING_IMAGE);
                 }
                 _ = check self.connection->execute(`INSERT INTO destinations (title, country_id, image, description) VALUES (${title}, ${countryId}, ${uploadImagee}, ${description})`);
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, "Successfully created destination", true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_SUCCESS, true);
             }
         } else if destinationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION);
@@ -116,198 +117,123 @@ service /data on adminEP {
         return res;
     }
 
-    // resource function post admin/addLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
-    //     mime:Entity[] parts = check req.getBodyParts();
-    //     http:Response response = new;
+    resource function post admin/addLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+        http:Response res = new;
+        map<any> formData = {};
 
-    //     if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
-    //         return http:UNAUTHORIZED;
-    //     }
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
 
-    //     if !utils:validateContentType(req) {
-    //         return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
-    //     }
-    //     if parts.length() == 0 {
-    //         return utils:setErrorResponse(response, "Request body is empty");
-    //     }
+        if !utils:validateContentType(req.getContentType()) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+        }
 
-    //     string destinationId = "";
-    //     string tourTypeId = "";
-    //     string title = "";
-    //     string overview = "";
-    //     boolean isImageInclude = false;
-    //     foreach mime:Entity part in parts {
-    //         string? dispositionName = part.getContentDisposition().name;
-    //         string|mime:ParserError text = part.getText();
-    //         if dispositionName is "destinationId" {
-    //             if text is string {
-    //                 destinationId = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving destinationId field");
-    //             }
-    //         } else if dispositionName is "tourTypeId" {
-    //             if text is string {
-    //                 tourTypeId = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving tourTypeId field");
-    //             }
-    //         } else if dispositionName is "title" {
-    //             if text is string {
-    //                 title = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving title field");
-    //             }
-    //         } else if dispositionName is "overview" {
-    //             if text is string {
-    //                 overview = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving overview field");
-    //             }
-    //         } else if dispositionName is "file" {
-    //             if !utils:validateImageFile(part) {
-    //                 return utils:setErrorResponse(response, "Invalid or unsupported image file type");
-    //             }
-    //             isImageInclude = true;
-    //         }
-    //     }
+        map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
+        if multipartFormData is error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_MULTIPART_REQUEST);
+        }
 
-    //     if destinationId is "" || title is "" || overview is "" || tourTypeId is "" {
-    //         return utils:setErrorResponse(response, "Parameters are empty");
-    //     }
-    //     if !isImageInclude {
-    //         return utils:setErrorResponse(response, "Image is required");
-    //     }
+        if !formData.hasKey("destinationId") || !formData.hasKey("tourTypeId") || !formData.hasKey("title") || !formData.hasKey("overview") || !formData.hasKey("file") {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:REQUIRED_FIELDS_MISSING);
+        }
 
-    //     if int:fromString(destinationId) !is int && int:fromString(tourTypeId) !is int {
-    //         return utils:setErrorResponse(response, "Invalid destinationId or tourTypeId");
-    //     }
+        string destinationId = <string>formData["destinationId"];
+        string tourTypeId = <string>formData["tourTypeId"];
+        string title = <string>formData["title"];
+        string overview = <string>formData["overview"];
 
-    //     DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
-    //     DBTourType|sql:Error tourResult = self.connection->queryRow(`SELECT * FROM tour_type WHERE id=${tourTypeId}`);
-    //     if desResult is sql:NoRowsError {
-    //         return utils:setErrorResponse(response, "Destination not found");
-    //     } else if desResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving destination");
-    //     }
-    //     if tourResult is sql:NoRowsError {
-    //         return utils:setErrorResponse(response, "Tour type not found");
-    //     } else if tourResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving tour type");
-    //     }
+        if int:fromString(destinationId) !is int || int:fromString(tourTypeId) !is int {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_DESTINATION_TOUTYPE_ID);
+        }
 
-    //     DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM  destination_location WHERE title=${title} AND destinations_id=${destinationId}`);
-    //     if locationResult is sql:NoRowsError {
-    //         string|error|io:Error? uploadedImagePath = img:uploadImage(req, "locations/", title);
-    //         if uploadedImagePath !is string {
-    //             return utils:setErrorResponse(response, "Error in uploading image");
-    //         }
-    //         _ = check self.connection->execute(`INSERT INTO destination_location (title,image,overview,tour_type_id,destinations_id) VALUES (${title},${uploadedImagePath},${overview},${tourTypeId},${destinationId})`);
-    //         response.setJsonPayload({"success": true, "content": "Successfully uploaded destination location"});
+        DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
+        DBTourType|sql:Error tourResult = self.connection->queryRow(`SELECT * FROM tour_type WHERE id=${tourTypeId}`);
+        if desResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_NOT_FOUND);
+        } else if desResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION);
+        }
+        if tourResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:TOURTYPE_NOT_FOUND);
+        } else if tourResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_TOURTYPE);
+        }
 
-    //     } else if locationResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving location");
-    //     } else {
-    //         return utils:setErrorResponse(response, "Destination location already exists");
-    //     }
-    //     return response;
-    // }
+        DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM  destination_location WHERE title=${title} AND destinations_id=${destinationId}`);
+        if locationResult is sql:NoRowsError {
+            string|error|io:Error? uploadedImagePath = img:uploadImage(<byte[]>formData["file"], "locations/", title);
+            if uploadedImagePath is io:Error || uploadedImagePath is error {
+                return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:IMAGE_UPLOAD);
+            }
+            _ = check self.connection->execute(`INSERT INTO destination_location (title,image,overview,tour_type_id,destinations_id) VALUES (${title},${uploadedImagePath},${overview},${tourTypeId},${destinationId})`);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:LOCATION_SUCCESS, true);
+        } else if locationResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
+        } else {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DESTINATION_LOCATION_ALREADY_EXISTS);
+        }
+    }
 
-    // resource function post admin/addOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
-    //     mime:Entity[] parts = check req.getBodyParts();
-    //     http:Response response = new;
+    resource function post admin/addOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+        http:Response res = new;
+        map<any> formData = {};
 
-    //     if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
-    //         return http:UNAUTHORIZED;
-    //     }
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
 
-    //     if !utils:validateContentType(req) {
-    //         return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
-    //     }
-    //     if parts.length() == 0 {
-    //         return utils:setErrorResponse(response, "Request body is empty");
-    //     }
+        if !utils:validateContentType(req.getContentType()) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+        }
 
-    //     string destinationLocationId = "";
-    //     string fromDate = "";
-    //     string toDate = "";
-    //     string title = "";
-    //     boolean isImageInclude = false;
-    //     foreach mime:Entity part in parts {
-    //         string? dispositionName = part.getContentDisposition().name;
-    //         string|mime:ParserError text = part.getText();
-    //         if dispositionName is "destinationLocationId" {
-    //             if text is string {
-    //                 destinationLocationId = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving destination location id");
-    //             }
-    //         } else if dispositionName is "fromDate" {
-    //             if text is string {
-    //                 fromDate = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving from date");
-    //             }
-    //         } else if dispositionName is "toDate" {
-    //             if text is string {
-    //                 toDate = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving to date");
-    //             }
-    //         } else if dispositionName is "title" {
-    //             if text is string {
-    //                 title = text;
-    //             } else {
-    //                 return utils:setErrorResponse(response, "Error in retrieving title");
-    //             }
-    //         } else if dispositionName is "file" {
-    //             if !utils:validateImageFile(part) {
-    //                 return utils:setErrorResponse(response, "Invalid or unsupported image file type");
-    //             }
-    //             isImageInclude = true;
-    //         }
-    //     }
+        map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
+        if multipartFormData is error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_MULTIPART_REQUEST);
+        }
 
-    //     string pattern = "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$";
-    //     boolean isValidFromDate = regex:matches(fromDate, pattern);
-    //     boolean isValidToDate = regex:matches(toDate, pattern);
+        if !formData.hasKey("destinationLocationId") || !formData.hasKey("fromDate") || !formData.hasKey("toDate") || !formData.hasKey("title") || !formData.hasKey("file") {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:REQUIRED_FIELDS_MISSING);
+        }
 
-    //     if destinationLocationId is "" || fromDate is "" || toDate is "" || title is "" {
-    //         return utils:setErrorResponse(response, "Missing required fields");
-    //     }
-    //     if !isImageInclude {
-    //         return utils:setErrorResponse(response, "Image is required");
-    //     }
-    //     if int:fromString(destinationLocationId) !is int {
-    //         return utils:setErrorResponse(response, "Invalid destination location id");
-    //     }
+        string destinationLocationId = <string>formData["destinationLocationId"];
+        string fromDate = <string>formData["fromDate"];
+        string toDate = <string>formData["toDate"];
+        string title = <string>formData["title"];
 
-    //     if isValidFromDate !is true && isValidToDate !is true {
-    //         return utils:setErrorResponse(response, "Invalid date format");
-    //     }
+        boolean isValidFromDate = regex:matches(fromDate, utils:DATETIME_REGEX);
+        boolean isValidToDate = regex:matches(toDate, utils:DATETIME_REGEX);
 
-    //     DBLocation|sql:Error desLocResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${destinationLocationId}`);
-    //     if desLocResult is sql:NoRowsError {
-    //         return utils:setErrorResponse(response, "Destination location not found");
-    //     } else if desLocResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving destination location");
-    //     }
+        if int:fromString(destinationLocationId) !is int {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_DESTINATION_LOCATION_ID);
+        }
 
-    //     DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM  offers WHERE title=${title} AND destination_location_id=${destinationLocationId} AND to_Date=${toDate} AND from_Date=${fromDate}`);
-    //     if offerResult is sql:NoRowsError {
-    //         string|error|io:Error? uploadedImagePath = img:uploadImage(req, "offers/", title);
-    //         if uploadedImagePath !is string {
-    //             return utils:setErrorResponse(response, "Error in uploading image");
-    //         } else {
-    //             _ = check self.connection->execute(`INSERT INTO offers (title,image,to_Date,from_Date,destination_location_id) VALUES (${title},${uploadedImagePath},${toDate},${fromDate},${destinationLocationId})`);
-    //             response.setJsonPayload({"success": true, "content": "Successfully uploaded offer"});
-    //         }
-    //     } else if offerResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving offer");
-    //     } else {
-    //         return utils:setErrorResponse(response, "Offer already exists");
-    //     }
-    //     return response;
-    // }
+        if isValidFromDate !is true && isValidToDate !is true {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_DATETIME_FROMAT);
+        }
+
+        DBLocation|sql:Error desLocResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${destinationLocationId}`);
+        if desLocResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_LOCATION_NOT_FOUND);
+        } else if desLocResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
+        }
+
+        DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM  offers WHERE title=${title} AND destination_location_id=${destinationLocationId} AND to_Date=${toDate} AND from_Date=${fromDate}`);
+        if offerResult is sql:NoRowsError {
+            string|error|io:Error? uploadedImagePath = img:uploadImage(<byte[]>formData["file"], "offers/", title);
+            if uploadedImagePath is io:Error || uploadedImagePath is error {
+                return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_UPLOADING_IMAGE);
+            } else {
+                _ = check self.connection->execute(`INSERT INTO offers (title,image,to_Date,from_Date,destination_location_id) VALUES (${title},${uploadedImagePath},${toDate},${fromDate},${destinationLocationId})`);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:OFFER_SUCCESS, true);
+            }
+        } else if offerResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_OFFERS);
+        } else {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:OFFER_ALREADY_EXISTS);
+        }
+    }
 
     resource function get admin/getReviews/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|http:Response|sql:Error|error {
         http:Response response = new;
@@ -492,112 +418,88 @@ service /data on adminEP {
         return response;
     }
 
-    // resource function put admin/updateDestination/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
-    //     mime:Entity[] parts = check req.getBodyParts();
-    //     http:Response response = new;
+    resource function put admin/updateDestination/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+        http:Response res = new;
+        map<any> formData = {};
 
-    //     if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
-    //         return http:UNAUTHORIZED;
-    //     }
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
 
-    //     if !utils:validateContentType(req) {
-    //         return utils:setErrorResponse(response, "Unsupported content type. Expected multipart/form-data.");
-    //     }
-    //     if parts.length() == 0 {
-    //         return utils:setErrorResponse(response, "Request body is empty");
-    //     }
-    //     string destinationId = "";
-    //     string countryId = "";
-    //     string title = "";
-    //     string description = "";
-    //     boolean isImageInclude = false;
-    //     foreach mime:Entity part in parts {
-    //         string? dispositionName = part.getContentDisposition().name;
-    //         string|mime:ParserError text = part.getText();
-    //         if dispositionName is "destinationId" {
-    //             if text is string {
-    //                 destinationId = text;
-    //             }
-    //         } else if dispositionName is "country_id" {
-    //             if text is string {
-    //                 countryId = text;
-    //             }
-    //         } else if dispositionName is "title" {
-    //             if text is string {
-    //                 title = text;
-    //             }
-    //         } else if dispositionName is "description" {
-    //             if text is string {
-    //                 description = text;
-    //             }
-    //         } else if dispositionName is "file" {
-    //             if !utils:validateImageFile(part) {
-    //                 return utils:setErrorResponse(response, "Invalid or unsupported image file type");
-    //             }
-    //             isImageInclude = true;
-    //         }
-    //     }
+        if !utils:validateContentType(req.getContentType()) {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+        }
 
-    //     if destinationId is "" {
-    //         return utils:setErrorResponse(response, "Destination ID is required");
-    //     }
+        map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
+        if multipartFormData is error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_MULTIPART_REQUEST);
+        }
 
-    //     DBDestination|sql:Error desResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
-    //     if desResult is sql:NoRowsError {
-    //         return utils:setErrorResponse(response, "Destination not found");
-    //     } else if desResult is sql:Error {
-    //         return utils:setErrorResponse(response, "Error in retrieving destination");
-    //     }
+        if !formData.hasKey("destinationId") {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:REQUIRED_FIELDS_MISSING);
+        }
 
-    //     if desResult is DBDestination {
-    //         sql:ParameterizedQuery[] setClauses = [];
-    //         if countryId != "" {
-    //             setClauses.push(<sql:ParameterizedQuery>`country_id = ${countryId}`);
-    //         }
-    //         if title != "" {
-    //             setClauses.push(`title = ${title}`);
-    //         }
-    //         if description != "" {
-    //             setClauses.push(<sql:ParameterizedQuery>`description = ${description}`);
-    //         }
-    //         if isImageInclude {
-    //             boolean|error isDeleteImage = img:deleteImageFile(desResult.image);
-    //             if isDeleteImage is false || isDeleteImage is error {
-    //                 return utils:setErrorResponse(response, "Error in deleting image");
-    //             }
-    //             string imageName = title != "" ? title : desResult.title;
-    //             string|error|io:Error? uploadedImage = img:uploadImage(req, "destinations/", imageName);
+        string destinationId = <string>formData["destinationId"];
 
-    //             if uploadedImage is error {
-    //                 return utils:setErrorResponse(response, "Error in uploading image");
-    //             }
-    //             setClauses.push(<sql:ParameterizedQuery>`image = ${uploadedImage}`);
-    //         }
+        if int:fromString(destinationId) !is int {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INVALID_COUNTRY_ID);
+        }
 
-    //         if setClauses.length() > 0 {
-    //             sql:ParameterizedQuery setPart = ``;
-    //             boolean isFirst = true;
-    //             foreach sql:ParameterizedQuery clause in setClauses {
-    //                 if !isFirst {
-    //                     setPart = sql:queryConcat(setPart, `, `, clause);
-    //                 } else {
-    //                     setPart = sql:queryConcat(setPart, clause);
-    //                     isFirst = false;
-    //                 }
-    //             }
-    //             sql:ParameterizedQuery queryConcat = sql:queryConcat(`UPDATE destinations SET `, setPart, ` WHERE id = ${destinationId} `);
-    //             sql:ExecutionResult|sql:Error updateResult = self.connection->execute(queryConcat);
-    //             if updateResult is sql:Error {
-    //                 return utils:setErrorResponse(response, "Error in updating destination");
-    //             }
-    //             response.setJsonPayload({"success": "Successfully updated the destination"});
-    //         } else {
-    //             return utils:setErrorResponse(response, "No valid fields to update");
-    //         }
-    //     }
+        DBDestination|sql:Error destinationResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
+        if destinationResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_NOT_FOUND);
+        } else if destinationResult is sql:Error {
+            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
 
-    //     return response;
-    // }
+        if destinationResult is DBDestination {
+            sql:ParameterizedQuery[] setClauses = [];
+            if formData.hasKey("countryId") && formData["countryId"] is string {
+                setClauses.push(<sql:ParameterizedQuery>`country_id = ${<string>formData["countryId"]}`);
+            }
+            if formData.hasKey("title") && formData["title"] is string {
+                setClauses.push(`title = ${<string>formData["title"]}`);
+            }
+            if formData.hasKey("description") && formData["description"] is string {
+                setClauses.push(<sql:ParameterizedQuery>`description = ${<string>formData["description"]}`);
+            }
+            if formData.hasKey("file") && formData["file"] is byte[] {
+                boolean|error isDeleteImage = img:deleteImageFile(destinationResult.image);
+                if isDeleteImage is false || isDeleteImage is error {
+                    return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:IMAGE_DELETE);
+                }
+                string imageName = formData["title"] != "" ? <string>formData["title"] : destinationResult.title;
+                string|error|io:Error? uploadedImage = img:uploadImage(<byte[]>formData["file"], "destinations/", imageName);
+
+                if uploadedImage is error {
+                    return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:IMAGE_UPLOAD);
+                }
+                setClauses.push(<sql:ParameterizedQuery>`image = ${uploadedImage}`);
+            }
+
+            if setClauses.length() > 0 {
+                sql:ParameterizedQuery setPart = ``;
+                boolean isFirst = true;
+                foreach sql:ParameterizedQuery clause in setClauses {
+                    if !isFirst {
+                        setPart = sql:queryConcat(setPart, `, `, clause);
+                    } else {
+                        setPart = sql:queryConcat(setPart, clause);
+                        isFirst = false;
+                    }
+                }
+                sql:ParameterizedQuery queryConcat = sql:queryConcat(`UPDATE destinations SET `, setPart, ` WHERE id = ${destinationId} `);
+                sql:ExecutionResult|sql:Error updateResult = self.connection->execute(queryConcat);
+                if updateResult is sql:Error {
+                    return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+                }
+                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_UPDATED, true);
+            } else {
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:DESTINATION_NO_FIELD);
+            }
+        }
+        return res;
+    }
 
     // resource function put admin/updateOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
     //     mime:Entity[] parts = check req.getBodyParts();
