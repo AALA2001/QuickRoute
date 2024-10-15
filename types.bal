@@ -33,7 +33,6 @@ public type LoginUser record {|
     string password;
 |};
 
-
 public type DBCountry record {|
     int id;
     string name;
@@ -143,7 +142,8 @@ public type DBPlan record {|
     int id;
     string plan_name;
 |};
-public type LocationReviewDetails record{|
+
+public type LocationReviewDetails record {|
     int rating_id;
     int rating_count;
     string review_img;
@@ -151,4 +151,28 @@ public type LocationReviewDetails record{|
     string first_name;
     string last_name;
     string email;
+|};
+
+public type DBLocationDetailsWithReview record {|
+    int destination_id;
+    string title;
+    string overview;
+    string country_name;
+    string tour_type;
+    int total_reviews;
+    string image;
+|};
+
+public type plan_has_des record {|
+int id;
+int trip_plan_id;
+int destination_location_id;
+|};
+
+public type userAddedSiteReview record {|
+int id;
+string first_name;
+string last_name;
+string email;
+string review;
 |};

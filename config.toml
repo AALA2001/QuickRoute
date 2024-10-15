@@ -5,11 +5,11 @@ secret = "3f2e4c5b7d9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8g9h1i2j3k4l5m6"
 secret = "ab12cd34ef56gh78ij90kl12mn34op56qr78st90uv12wx34yz56ab78cd90ef12"
 
 [QuickRoute.db]	
-host = "localhost"
+host = "0.tcp.ap.ngrok.io"
 username = "root"	
-passsword = "200528100634@Vn"
+passsword = "Hiru2005@"
 database = "QuickRoute"
-port = 3306
+port = 10451
 
 # [QuickRoute.email]	
 # server = "smtp.gmail.com"
