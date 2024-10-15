@@ -190,9 +190,17 @@ public type DestinationsWithLocationCount record {|
 public type UserWishlist record {|
     int destinations_id;
     string destination_location_title;
-    string	destination_title;
-    string	country_name;
-    decimal average_rating;	
+    string destination_title;
+    string country_name;
+    decimal average_rating;
     int total_ratings;
-    string	image;
+    string image;
+|};
+
+public type userOffers record {|
+    time:Civil from_Date;
+    time:Civil to_Date;
+    string offer_title;
+    string offer_image;
+    string destinations_name;
 |};
