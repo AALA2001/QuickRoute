@@ -162,6 +162,7 @@ public type DBLocationDetailsWithReview record {|
     int total_reviews;
     string image;
     string average_rating;
+    string destination_title;
 |};
 
 public type plan_has_des record {|
