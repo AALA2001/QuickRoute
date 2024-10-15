@@ -182,7 +182,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get user/wishlist/[string BALUSERTOKEN](int destinations_id) returns http:Response|error {
+    resource function get user/wishlist/add/[string BALUSERTOKEN](int destinations_id) returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -216,6 +216,38 @@ service /clientData on clientSideEP {
                         return backendResponse;
                     }
                 }
+            }
+        } else {
+            backendResponse.setJsonPayload({success: false, message: "token expired"});
+            backendResponse.statusCode = http:STATUS_UNAUTHORIZED;
+            return backendResponse;
+        }
+    }
+
+    resource function get user/wishlist/[string BALUSERTOKEN]() returns http:Response|error {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        http:Response backendResponse = new;
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                backendResponse.setJsonPayload({success: false, message: "user not found"});
+                backendResponse.statusCode = http:STATUS_NOT_FOUND;
+                return backendResponse;
+            } else if result is sql:Error {
+                backendResponse.setJsonPayload({success: false, message: "database error"});
+                backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+                return backendResponse;
+            } else {
+                stream<UserWishlist, sql:Error?> user_wishlist_strem = self.connection->query(`SELECT destination_location.id AS destinations_id,destination_location.title AS destination_location_title,destinations.title AS destination_title,country.name AS country_name,ROUND(AVG(ratings.rating_count),1) AS average_rating,COUNT(ratings.rating_count) AS total_ratings,destination_location.image AS image FROM wishlist INNER JOIN destination_location ON destination_location.id = wishlist.destination_location_id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE wishlist.user_id = ${result.id} GROUP BY destination_location.id, destination_location.title, country.name `);
+                UserWishlist[] userWishlist = [];
+                check from UserWishlist user_wishlist in user_wishlist_strem
+                    do {
+                        userWishlist.push(user_wishlist);
+                    };
+                backendResponse.setJsonPayload({success: true, wishlist: userWishlist.toJson()});
+                backendResponse.statusCode = http:STATUS_OK;
+                return backendResponse;
             }
         } else {
             backendResponse.setJsonPayload({success: false, message: "token expired"});
@@ -350,14 +382,14 @@ service /clientData on clientSideEP {
                 QuickRouteDestination.push(dbDestination);
             };
         check dbDestination_stream.close();
-        stream<userAddedSiteReview, sql:Error?> userAddedReview = self.connection->query(`SELECT reviews.id AS id,first_name,last_name,email,review FROM  reviews INNER JOIN user ON reviews.user_id = user.id`);
+        stream<userAddedSiteReview, sql:Error?> userAddedReview = self.connection->query(`SELECT first_name,last_name,email,review ,(SELECT COUNT(reviews.id) FROM reviews) AS total_review_count FROM  reviews INNER JOIN user ON reviews.user_id = user.id `);
         userAddedSiteReview[] userAddedReviews = [];
         check from userAddedSiteReview userReview in userAddedReview
             do {
                 userAddedReviews.push(userReview);
             };
         check userAddedReview.close();
-        stream<DestinationsWithLocationCount, sql:Error?> destination_with_location_count_stream = self.connection->query(`SELECT d.id AS id, d.title AS destination_title,d.image AS destination_image,COUNT(dl.id) AS location_count FROM destinations d INNER JOIN destination_location dl ON d.id = dl.destinations_id GROUP BY d.id, d.title, d.image`);
+        stream<DestinationsWithLocationCount, sql:Error?> destination_with_location_count_stream = self.connection->query(`SELECT d.id AS id, d.title AS destination_title,d.image AS destination_image,COUNT(dl.id) AS location_count FROM destinations d INNER JOIN destination_location dl ON d.id = dl.destinations_id GROUP BY d.id, d.title, d.image ORDER BY location_count DESC LIMIT 8`);
         DestinationsWithLocationCount[] destinations_with_location_count = [];
         check from DestinationsWithLocationCount destination in destination_with_location_count_stream
             do {
@@ -365,7 +397,7 @@ service /clientData on clientSideEP {
             };
         check destination_with_location_count_stream.close();
 
-        backendResponse.setJsonPayload({destinationLocation: QuickRouteDestination.toJson(), userSiteReviews: userAddedReviews.toJson(),destinations_with_location_count:destinations_with_location_count.toJson()});
+        backendResponse.setJsonPayload({destinationLocation: QuickRouteDestination.toJson(), userSiteReviews: userAddedReviews.toJson(), destinations_with_location_count: destinations_with_location_count.toJson()});
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }

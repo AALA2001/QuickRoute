@@ -177,6 +177,7 @@ public type userAddedSiteReview record {|
     string last_name;
     string email;
     string review;
+    string total_review_count;
 |};
 
 public type DestinationsWithLocationCount record {|
@@ -184,4 +185,14 @@ public type DestinationsWithLocationCount record {|
     string destination_title;
     string destination_image;
     int location_count;
+|};
+
+public type UserWishlist record {|
+    int destinations_id;
+    string destination_location_title;
+    string	destination_title;
+    string	country_name;
+    decimal average_rating;	
+    int total_ratings;
+    string	image;
 |};
