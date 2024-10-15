@@ -5,11 +5,11 @@ import ballerina/io;
 import ballerina/regex;
 
 public function deleteImageFile(string filePath) returns boolean|error {
-    boolean fileExists = check file:test(filePath, file:EXISTS);
+    boolean fileExists = check file:test("./uploads/"+filePath, file:EXISTS);
     if !fileExists {
         return false;
     }
-    error? result = file:remove(filePath);
+    error? result = file:remove("./uploads/"+filePath);
     if result is error {
         return false;
     }
