@@ -402,11 +402,20 @@ service /clientData on clientSideEP {
             do {
                 offers.push(offer);
             };
+        int|sql:Error destination_count = check self.connection->queryRow(`SELECT COUNT(*) FROM destinations`);
+        int|sql:Error users_count = check self.connection->queryRow(`SELECT COUNT(*) FROM user`);
+        int|sql:Error destination_location_count = check self.connection->queryRow(`SELECT COUNT(*) FROM destination_location`);
+        json bannerData = {
+            destination_count: check destination_count,
+            users_count: check users_count,
+            destination_location_count: check destination_location_count
+        };
         backendResponse.setJsonPayload({
             destinationLocation: QuickRouteDestination.toJson(),
             userSiteReviews: userAddedReviews.toJson(),
             destinations_with_location_count: destinations_with_location_count.toJson(),
-            offers: offers.toJson()
+            offers: offers.toJson(),
+            bannerData: bannerData
         });
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
