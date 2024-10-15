@@ -42,6 +42,14 @@ service / on mainEP {
         return res;
     }
 }
+
+@http:ServiceConfig {
+    cors: {
+        allowOrigins: ["*"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE"],
+        allowCredentials: true
+    }
+}
 service /auth on mainEP {
     private final mysql:Client connection;
 
