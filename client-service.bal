@@ -357,7 +357,15 @@ service /clientData on clientSideEP {
                 userAddedReviews.push(userReview);
             };
         check userAddedReview.close();
-        backendResponse.setJsonPayload({destinationLocation: QuickRouteDestination.toJson(), userSiteReviews: userAddedReviews.toJson()});
+        stream<DestinationsWithLocationCount, sql:Error?> destination_with_location_count_stream = self.connection->query(`SELECT d.id AS id, d.title AS destination_title,d.image AS destination_image,COUNT(dl.id) AS location_count FROM destinations d INNER JOIN destination_location dl ON d.id = dl.destinations_id GROUP BY d.id, d.title, d.image`);
+        DestinationsWithLocationCount[] destinations_with_location_count = [];
+        check from DestinationsWithLocationCount destination in destination_with_location_count_stream
+            do {
+                destinations_with_location_count.push(destination);
+            };
+        check destination_with_location_count_stream.close();
+
+        backendResponse.setJsonPayload({destinationLocation: QuickRouteDestination.toJson(), userSiteReviews: userAddedReviews.toJson(),destinations_with_location_count:destinations_with_location_count.toJson()});
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }

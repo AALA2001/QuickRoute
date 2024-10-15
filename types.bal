@@ -166,15 +166,22 @@ public type DBLocationDetailsWithReview record {|
 |};
 
 public type plan_has_des record {|
-int id;
-int trip_plan_id;
-int destination_location_id;
+    int id;
+    int trip_plan_id;
+    int destination_location_id;
 |};
 
 public type userAddedSiteReview record {|
-int id;
-string first_name;
-string last_name;
-string email;
-string review;
+    int id;
+    string first_name;
+    string last_name;
+    string email;
+    string review;
+|};
+
+public type DestinationsWithLocationCount record {|
+    int id;
+    string destination_title;
+    string destination_image;
+    int location_count;
 |};
