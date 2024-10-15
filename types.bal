@@ -203,4 +203,5 @@ public type userOffers record {|
     string offer_title;
     string offer_image;
     string destinations_name;
+    string country;
 |};
