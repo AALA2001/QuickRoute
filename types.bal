@@ -161,6 +161,7 @@ public type DBLocationDetailsWithReview record {|
     string tour_type;
     int total_reviews;
     string image;
+    string average_rating;
 |};
 
 public type plan_has_des record {|
