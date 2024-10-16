@@ -192,9 +192,10 @@ public type UserWishlist record {|
     string destination_location_title;
     string destination_title;
     string country_name;
-    decimal average_rating;
+    ()|string average_rating;
     int total_ratings;
     string image;
+    string overview;
 |};
 
 public type userOffers record {|
