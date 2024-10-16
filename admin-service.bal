@@ -46,7 +46,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -100,7 +100,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -145,7 +145,7 @@ service /data on adminEP {
         } else if locationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DESTINATION_LOCATION_ALREADY_EXISTS);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CONFLICT, utils:DESTINATION_LOCATION_ALREADY_EXISTS);
         }
     }
 
@@ -158,7 +158,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -205,7 +205,7 @@ service /data on adminEP {
         } else if offerResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_OFFERS);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:OFFER_ALREADY_EXISTS);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CONFLICT, utils:OFFER_ALREADY_EXISTS);
         }
     }
 
@@ -263,7 +263,7 @@ service /data on adminEP {
             check reviewStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, reviews.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, reviews.toJson(), true);
     }
 
     resource function get admin/getOffers/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
@@ -282,7 +282,7 @@ service /data on adminEP {
             check offersStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, offers.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, offers.toJson(), true);
     }
 
     resource function get admin/getLocations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
@@ -316,8 +316,7 @@ service /data on adminEP {
         }
 
         check locationStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locations, true);
-
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locations, true);
     }
 
     resource function get admin/getLocationReviews/[string BALUSERTOKEN](int locationId) returns error|http:Response {
@@ -349,7 +348,7 @@ service /data on adminEP {
         }
 
         check reviewStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locationReviews, true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locationReviews, true);
     }
 
     resource function get admin/getDestinations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
@@ -369,7 +368,7 @@ service /data on adminEP {
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, destinations.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, destinations.toJson(), true);
     }
 
     resource function put admin/updatePassword/[string BALUSERTOKEN](@http:Payload RequestPassword payload) returns http:Unauthorized & readonly|error|http:Response {
@@ -406,7 +405,7 @@ service /data on adminEP {
         if result is DBUser {
             boolean isOldPwVerify = password:verifyHmac(payload.old_password, result.password);
             if isOldPwVerify !is true {
-                return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INCORRECT_OLD_PASSWORD);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INCORRECT_OLD_PASSWORD);
             }
             string newHashedPw = password:generateHmac(payload.new_password);
             sql:ExecutionResult|sql:Error updateResult = self.connection->execute(`UPDATE admin SET password = ${newHashedPw} WHERE email  = ${payload.email}`);
@@ -415,7 +414,7 @@ service /data on adminEP {
             }
             return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:PASSWORD_UPDATED, true);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:USER_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:USER_NOT_FOUND);
         }
     }
 
@@ -428,7 +427,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -448,7 +447,7 @@ service /data on adminEP {
 
         DBDestination|sql:Error destinationResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
         if destinationResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:DESTINATION_NOT_FOUND);
         } else if destinationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
@@ -495,9 +494,9 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:DESTINATION_UPDATED, true);
             } else {
-                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:NO_FIELD);
             }
         }
         return res;
@@ -512,7 +511,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -532,7 +531,7 @@ service /data on adminEP {
 
         DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM offers WHERE id=${offerId}`);
         if offerResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:OFFER_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:OFFER_NOT_FOUND);
         } else if offerResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_OFFERS);
         }
@@ -589,7 +588,7 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:OFFER_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:OFFER_UPDATED, true);
             } else {
                 return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
             }
@@ -606,7 +605,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -626,7 +625,7 @@ service /data on adminEP {
 
         DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${locationId}`);
         if locationResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_LOCATION_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:DESTINATION_LOCATION_NOT_FOUND);
         } else if locationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
         }
@@ -675,7 +674,7 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:DESTINATION_UPDATED, true);
             } else {
                 return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
             }
