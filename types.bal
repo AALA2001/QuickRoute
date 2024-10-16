@@ -99,6 +99,17 @@ public type DBLocationDetails record {|
     string destination_title;
     string country_name;
 |};
+public type DBLocationDetailsWithRatings record {|
+    int location_id;
+    string title;
+    string image;
+    string overview;
+    string tour_type;
+    string destination_title;
+    string country_name;
+    int total_ratings;
+    string|() average_rating;
+|};
 
 public type DBDestinationDetails record {|
     int destination_id;

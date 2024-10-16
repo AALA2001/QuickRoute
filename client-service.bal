@@ -359,16 +359,30 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get destinationLocation() returns http:Response|error {
+    resource function get destinationLocations() returns http:Response|error {
         http:Response backendResponse = new;
-        stream<DBLocationDetails, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image,destination_location.overview AS overview, tour_type.type AS tour_type,destinations.title AS destination_title, country.name AS country_name FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id`);
-        DBLocationDetails[] QuickRouteDestination = [];
-        check from DBLocationDetails dbDestination in dbDestination_stream
+        stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name`);
+        DBLocationDetailsWithRatings[] QuickRouteDestination = [];
+        check from DBLocationDetailsWithRatings dbDestination in dbDestination_stream
             do {
                 QuickRouteDestination.push(dbDestination);
             };
         check dbDestination_stream.close();
-        backendResponse.setJsonPayload(QuickRouteDestination);
+        backendResponse.setJsonPayload(QuickRouteDestination.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+    resource function get destinationLocation(string destination_id) returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE destination_location.id = ${destination_id}  GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name `);
+        DBLocationDetailsWithRatings[] QuickRouteDestination = [];
+        check from DBLocationDetailsWithRatings dbDestination in dbDestination_stream
+            do {
+                QuickRouteDestination.push(dbDestination);
+            };
+        check dbDestination_stream.close();
+        backendResponse.setJsonPayload(QuickRouteDestination.toJson());
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }
