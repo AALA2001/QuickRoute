@@ -18,4 +18,6 @@ public function validateContentType(string contentType) returns boolean {
     return contentType.startsWith("multipart/form-data");
 }
 
-
+public function response(boolean status, string message) returns json {
+    return {"success": status, "content": message};
+}
