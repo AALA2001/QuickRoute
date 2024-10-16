@@ -1,4 +1,5 @@
 import QuickRoute.db;
+// import QuickRoute.img;
 import QuickRoute.jwt;
 import QuickRoute.password;
 import QuickRoute.time;
@@ -6,11 +7,11 @@ import QuickRoute.utils;
 
 import ballerina/http;
 import ballerina/io;
+import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
 import ballerina/url;
 import ballerinax/mysql;
-import ballerina/mime;
 
 http:ClientConfiguration authEPConfig = {
     cookieConfig: {
@@ -27,8 +28,8 @@ listener http:Listener mainEP = new (9091);
     }
 }
 service / on mainEP {
-      resource function get [string folderName]/[string imageName]() returns http:Response|error {
-        string imagePath = "uploads/"+folderName + "/" + imageName;
+    resource function get [string folderName]/[string imageName]() returns http:Response|error {
+        string imagePath = "uploads/" + folderName + "/" + imageName;
         byte[] imageContent = check io:fileReadBytes(imagePath);
         http:Response res = new;
         res.setPayload(imageContent);
@@ -40,6 +41,14 @@ service / on mainEP {
             res.setHeader(http:CONTENT_TYPE, "application/octet-stream");
         }
         return res;
+    }
+}
+
+@http:ServiceConfig {
+    cors: {
+        allowOrigins: ["*"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE"],
+        allowCredentials: true
     }
 }
 service /auth on mainEP {
