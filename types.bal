@@ -49,6 +49,7 @@ public type DBCountry record {|
     string name;
 |};
 
+
 public type DBDestination record {|
     int id;
     string title;
@@ -119,7 +120,7 @@ public type DBDestinationDetails record {|
 |};
 
 public type RequestPassword record {|
-    string user_id;
+    string email;
     string new_password;
     string old_password;
 |};
