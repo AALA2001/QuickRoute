@@ -396,7 +396,7 @@ service /clientData on clientSideEP {
                 destinations_with_location_count.push(destination);
             };
         check destination_with_location_count_stream.close();
-        stream<userOffers, sql:Error?> user_offers_stream = self.connection->query(`SELECT offers.from_Date,offers.to_Date,offers.title AS offer_title,offers.image AS offer_image, destination_location.title AS destinations_name , country.name AS country FROM offers INNER JOIN destination_location ON destination_location.id = offers.destination_location_id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON country.id = destinations.country_id WHERE offers.to_Date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 2 DAY) LIMIT 4`);
+        stream<userOffers, sql:Error?> user_offers_stream = self.connection->query(`SELECT offers.from_Date,offers.to_Date,offers.title AS offer_title,offers.image AS offer_image, destination_location.title AS destinations_name , country.name AS country FROM offers INNER JOIN destination_location ON destination_location.id = offers.destination_location_id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON country.id = destinations.country_id WHERE offers.to_Date BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 2 DAY) LIMIT 3`);
         userOffers[] offers = [];
         check from userOffers offer in user_offers_stream
             do {
