@@ -25,7 +25,10 @@ public enum LNAME_ERRORS {
 
 public enum PASSWORD_ERRORS {
     PASSWORD_LENGTH = "Password should be minimum 8 characters in length, shouldcontain at least one uppercase letter, one lowercase letter, at  least one digit and at least one special character",
-    PASSWORD_REQUIRED = "Password is required"
+    PASSWORD_REQUIRED = "Password is required",
+    INCORRECT_OLD_PASSWORD = "Old password is incorrect",
+    USER_NOT_FOUND = "User not found",
+    PASSWORD_UPDATED = "Password updated successfully"
 }
 
 public enum COMMON_ERROR_MESSAGES {
@@ -46,8 +49,8 @@ public enum DESTINATION_ERRORS {
     IMAGE_UPLOAD = "Error uploading image",
     DATABASE_ERROR = "Database error",
     DESTINATION_UPDATED = "Destination updated successfully",
-    DESTINATION_NO_FIELD= "No fields to update",
-    DESTINATION_SUCCESS = "Successfully created destination location"
+    NO_FIELD = "No fields to update",
+    DESTINATION_SUCCESS = "Successfully created destination"
 }
 
 public enum LOCATION_ERRORS {
@@ -55,12 +58,12 @@ public enum LOCATION_ERRORS {
     DESTINATION_NOT_FOUND = "Destination not found",
     TOURTYPE_NOT_FOUND = "Tour type not found",
     ERROR_FETCHING_TOURTYPE = "Error in fetching tour type",
-    ERROR_FETCHING_DESTINATION = "Error in fetching destination",
     ERROR_UPLOADING_IMAGE = "Error in uploading image",
     DESTINATION_ALREADY_EXISTS = "Destination already exists",
     ERROR_FETCHING_DESTINATION_LOCATION = "Error in fetching destination location",
     DESTINATION_LOCATION_ALREADY_EXISTS = "Destination location already exists",
-    LOCATION_SUCCESS = "Successfully created destination location"
+    LOCATION_SUCCESS = "Successfully created destination location",
+    INVALID_LOCATION_ID = "Invalid location Id"
 }
 
 public enum OFFER_ERRORS {
@@ -69,5 +72,8 @@ public enum OFFER_ERRORS {
     DESTINATION_LOCATION_NOT_FOUND = "Destination location not found",
     OFFER_ALREADY_EXISTS = "Offer already exists",
     ERROR_FETCHING_OFFERS = "Error in fetching offers",
-    OFFER_SUCCESS = "Successfully created offer"
+    OFFER_SUCCESS = "Successfully created offer",
+    OFFER_UPDATED = "Successfully updated the offer",
+    INVALID_OFFER_ID = "Invalid offer Id",
+    OFFER_NOT_FOUND = "Offer not found"
 }
