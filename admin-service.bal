@@ -287,7 +287,7 @@ service /data on adminEP {
 
     resource function get admin/getLocations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
         http:Response response = new;
-        json[] locationWithReviews = [];
+        json[] locations = [];
 
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
             return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
@@ -306,11 +306,29 @@ service /data on adminEP {
         INNER JOIN destinations ON destinations.id = destination_location.destinations_id 
         INNER JOIN country ON country.id = destinations.country_id ORDER BY destination_location.id DESC
     `);
-
         sql:Error|() locationStreamError = locationStream.forEach(function(DBLocationDetails location) {
-            LocationReviewDetails[] reviews = [];
+            locations.push(location.toJson());
+        });
 
-            stream<LocationReviewDetails, sql:Error?> reviewStream = self.connection->query(`
+        if locationStreamError is sql:Error {
+            check locationStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        check locationStream.close();
+        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locations, true);
+
+    }
+
+    resource function get admin/getLocationReviews/[string BALUSERTOKEN](int locationId) returns error|http:Response {
+        http:Response response = new;
+        json[] locationReviews = [];
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
+
+        stream<LocationReviewDetails, sql:Error?> reviewStream = self.connection->query(`
             SELECT ratings.id AS rating_id, 
                    ratings.rating_count, 
                    ratings.review_img, 
@@ -320,31 +338,18 @@ service /data on adminEP {
                    user.email 
             FROM ratings 
             INNER JOIN user ON user.id = ratings.user_id 
-            WHERE destination_location_id = ${location.location_id}
-        `);
-            sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
-                reviews.push(review);
-            });
-
-            if reviewStreamError is sql:Error {
-                return ();
-            }
-
-            json returnObject = {
-                location: location.toJson(),
-                reviews: reviews.toJson()
-            };
-            locationWithReviews.push(returnObject);
+            WHERE destination_location_id = ${locationId}`);
+        sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
+            locationReviews.push(review.toJson());
         });
 
-        if locationStreamError is sql:Error {
-            check locationStream.close();
+        if reviewStreamError is sql:Error {
+            check reviewStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
-        check locationStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locationWithReviews, true);
-
+        check reviewStream.close();
+        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locationReviews, true);
     }
 
     resource function get admin/getDestinations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
