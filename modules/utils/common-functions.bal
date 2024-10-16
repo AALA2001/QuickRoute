@@ -1,6 +1,6 @@
 import ballerina/mime;
 import ballerina/http;
-public function returnResponseWithStatusCode(http:Response res, int statusCode, string message, boolean status = false) returns http:Response {
+public function returnResponseWithStatusCode(http:Response res, int statusCode, string|json message, boolean status = false) returns http:Response {
     res.statusCode = statusCode;
     res.setJsonPayload({"success": status, "message": message});
     return res;
