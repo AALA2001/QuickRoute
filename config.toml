@@ -9,7 +9,7 @@ host = "0.tcp.in.ngrok.io"
 username = "root"	
 passsword = "Hiru2005@"
 database = "QuickRoute"
-port = 12296
+port = 18539
 
 # [QuickRoute.email]	
 # server = "smtp.gmail.com"

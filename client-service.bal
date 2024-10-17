@@ -29,7 +29,7 @@ service /clientData on clientSideEP {
         _ = checkpanic self.connection.close();
     }
 
-    resource function get plan/create/[string BALUSERTOKEN](string planName) returns http:Response|error {
+    isolated resource function get plan/create/[string BALUSERTOKEN](string planName) returns http:Response|error {
         http:Response backendResponse = new;
         if planName == "" {
             backendResponse.setJsonPayload({success: false, message: "plan name is required"});
@@ -70,7 +70,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get plan/allPlans/[string BALUSERTOKEN]() returns json|error|http:Response {
+    isolated resource function get plan/allPlans/[string BALUSERTOKEN]() returns json|error|http:Response {
         http:Response backendResponse = new;
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
@@ -111,7 +111,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function put plan/rename/[string BALUSERTOKEN](@http:Payload PlanRename newPlanName) returns http:Response|error {
+    isolated resource function put plan/rename/[string BALUSERTOKEN](@http:Payload PlanRename newPlanName) returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -153,7 +153,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function post site/review/[string BALUSERTOKEN](@http:Payload siteReview SiteReview) returns http:Response|error {
+    isolated resource function post site/review/[string BALUSERTOKEN](@http:Payload siteReview SiteReview) returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -182,7 +182,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get user/wishlist/add/[string BALUSERTOKEN](int destinations_id) returns http:Response|error {
+    isolated resource function get user/wishlist/add/[string BALUSERTOKEN](int destinations_id) returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -224,7 +224,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get user/wishlist/[string BALUSERTOKEN]() returns http:Response|error {
+    isolated resource function get user/wishlist/[string BALUSERTOKEN]() returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -256,7 +256,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function delete user/wishlist/removeDestination/[string BALUSERTOKEN](@http:Payload removeWishList RemoveDestination) returns http:Response|error {
+    isolated resource function delete user/wishlist/removeDestination/[string BALUSERTOKEN](@http:Payload removeWishList RemoveDestination) returns http:Response|error {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -297,7 +297,7 @@ service /clientData on clientSideEP {
 
     }
 
-    resource function get plan/userPlan/addDestination/[string BALUSERTOKEN](int plan_id, int destination_id) returns error|http:Response {
+    isolated resource function get plan/userPlan/addDestination/[string BALUSERTOKEN](int plan_id, int destination_id) returns error|http:Response {
         json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
         UserDTO payload = check jsondata:parseString(decodeJWT.toString());
         http:Response backendResponse = new;
@@ -359,7 +359,7 @@ service /clientData on clientSideEP {
         }
     }
 
-    resource function get destinationLocations() returns http:Response|error {
+    isolated resource function get destinationLocations() returns http:Response|error {
         http:Response backendResponse = new;
         stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name`);
         DBLocationDetailsWithRatings[] QuickRouteDestination = [];
@@ -373,7 +373,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    resource function get destinationLocation(string destination_id) returns http:Response|error {
+    isolated resource function get destinationLocation(string destination_id) returns http:Response|error {
         http:Response backendResponse = new;
         stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE destination_location.id = ${destination_id}  GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name `);
         DBLocationDetailsWithRatings[] QuickRouteDestination = [];
@@ -387,7 +387,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    resource function get homepage() returns error|http:Response {
+    isolated resource function get homepage() returns error|http:Response {
         http:Response backendResponse = new;
         stream<DBLocationDetailsWithReview, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS destination_id,destination_location.title,destination_location.overview ,country.name AS country_name,tour_type.type AS tour_type,COUNT(ratings.id) AS total_reviews,destination_location.image , ROUND(AVG(ratings.rating_count),1)AS average_rating , destinations.title AS destination_title FROM ratings INNER JOIN destination_location ON ratings.destination_location_id = destination_location.id INNER JOIN destinations ON destination_location.destinations_id = destinations.id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id GROUP BY destination_location.id, destination_location.title, destination_location.overview, country.name, tour_type.type ORDER BY total_reviews DESC LIMIT 10`);
         DBLocationDetailsWithReview[] QuickRouteDestination = [];

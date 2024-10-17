@@ -1,7 +1,7 @@
 import ballerina/time;
 import ballerina/regex;
 
-public function currentTimeStamp() returns string {
+public isolated function currentTimeStamp() returns string {
     time:Utc currTime = time:utcNow();
     string currentTimeStamp = time:utcToString(currTime);
     return currentTimeStamp;
@@ -14,7 +14,7 @@ public function expierTimeStamp() returns string {
     return expiryTimeString;
 }
 
-public function validateExpierTime(string currentTime, string expiryTime) returns boolean {
+public isolated function validateExpierTime(string currentTime, string expiryTime) returns boolean {
     if (currentTime <= expiryTime) {
         return true;
     } else {
