@@ -1,9 +1,13 @@
 import QuickRoute.db;
+import QuickRoute.filters;
+import QuickRoute.img;
 import QuickRoute.jwt;
 import QuickRoute.time;
+import QuickRoute.utils;
 
 import ballerina/data.jsondata;
 import ballerina/http;
+import ballerina/io;
 import ballerina/sql;
 import ballerinax/mysql;
 
@@ -434,6 +438,138 @@ service /clientData on clientSideEP {
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }
+
+    isolated resource function get locationReviews(string location_id) returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<LocationReviewDetails, sql:Error?> dbLocationReview_strem = self.connection->query(`SELECT ratings.id AS rating_id, 
+                   ratings.rating_count, 
+                   ratings.review_img, 
+                   ratings.review, 
+                   user.first_name, 
+                   user.last_name, 
+                   user.email 
+            FROM ratings 
+            INNER JOIN user ON user.id = ratings.user_id 
+            WHERE destination_location_id =${location_id}`);
+        LocationReviewDetails[] LocationReviews = [];
+        check from LocationReviewDetails dblocationReview in dbLocationReview_strem
+            do {
+                LocationReviews.push(dblocationReview);
+            };
+        check dbLocationReview_strem.close();
+        backendResponse.setJsonPayload(LocationReviews.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+    resource function post user/rating/addLocationReview/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
+        http:Response backendResponse = new;
+        map<any> formData = {};
+        boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
+        if requestFilterUser is boolean && requestFilterUser == false {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_UNAUTHORIZED, "Token expired");
+        }
+        if !utils:validateContentType(req.getContentType()) {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
+        }
+
+        map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
+        if multipartFormData is error {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_BAD_REQUEST, utils:INVALID_MULTIPART_REQUEST);
+        }
+
+        if !formData.hasKey("email") || !formData.hasKey("locationId") || !formData.hasKey("comment") || !formData.hasKey("rating") {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_BAD_REQUEST, utils:REQUIRED_FIELDS_MISSING);
+        }
+
+        string email = <string>formData["email"];
+        string locationId = <string>formData["locationId"];
+        string comment = <string>formData["comment"];
+        string rating = <string>formData["rating"];
+
+        if int:fromString(locationId) !is int {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_BAD_REQUEST, utils:INVALID_LOCATION_ID);
+        }
+
+        if int:fromString(rating) !is int {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_BAD_REQUEST, utils:INVALID_LOCATION_ID);
+        }
+
+        DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${locationId}`);
+        if locationResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_NOT_FOUND, utils:DESTINATION_LOCATION_NOT_FOUND);
+        } else if locationResult is sql:Error {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        DBUser|sql:Error userResult = self.connection->queryRow(`SELECT * FROM user WHERE email=${email}`);
+        if userResult is sql:NoRowsError {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_NOT_FOUND, utils:USER_NOT_FOUND);
+        } else if userResult is sql:Error {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        if userResult is DBUser {
+            if formData.hasKey("file") {
+                if formData["file"] is byte[] {
+                    string|error|io:Error? uploadImage = img:uploadImage(<byte[]>formData["file"], "ratings/", userResult.first_name + locationId.toString());
+                    if uploadImage is io:Error || uploadImage is error {
+                        return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_UPLOADING_IMAGE);
+                    }
+                    _ = check self.connection->execute(`INSERT INTO ratings (rating_count, user_id, review, review_img, destination_location_id) VALUES (${rating}, ${userResult.id}, ${comment}, ${uploadImage}, ${locationId})`);
+                    return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_CREATED, utils:REVIEW_CREATED, true);
+                }
+            } else {
+                _ = check self.connection->execute(`INSERT INTO ratings (rating_count, user_id, review, destination_location_id) VALUES (${rating}, ${userResult.id}, ${comment}, ${locationId})`);
+                return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_CREATED, utils:REVIEW_CREATED, true);
+            }
+        }
+
+        return backendResponse;
+    }
+
+    resource function get countries() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBCountry, sql:Error?> dbCountries_stream = self.connection->query(`SELECT * from country ORDER BY name ASC`);
+        DBCountry[] countries = [];
+        check from DBCountry country in dbCountries_stream
+            do {
+                countries.push(country);
+            };
+        check dbCountries_stream.close();
+        backendResponse.setJsonPayload(countries.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+    resource function get destinations() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBDestination, sql:Error?> dbDestinations_stream = self.connection->query(`SELECT * from destinations ORDER BY title ASC`);
+        DBDestination[] destinationsArray = [];
+        check from DBDestination destination in dbDestinations_stream
+            do {
+                destinationsArray.push(destination);
+            };
+        check dbDestinations_stream.close();
+        backendResponse.setJsonPayload(destinationsArray.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+        resource function get tourTypes() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBTourType, sql:Error?> tourTypes_stream = self.connection->query(`SELECT * from tour_type ORDER BY type ASC`);
+        DBTourType[] tourTypesArray = [];
+        check from DBTourType tourType in tourTypes_stream
+            do {
+                tourTypesArray.push(tourType);
+            };
+        check tourTypes_stream.close();
+        backendResponse.setJsonPayload(tourTypesArray.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
 
 }
 
