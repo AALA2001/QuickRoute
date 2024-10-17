@@ -38,6 +38,7 @@ public type DBCountry record {|
     string name;
 |};
 
+
 public type DBDestination record {|
     int id;
     string title;
@@ -98,6 +99,17 @@ public type DBLocationDetails record {|
     string destination_title;
     string country_name;
 |};
+public type DBLocationDetailsWithRatings record {|
+    int location_id;
+    string title;
+    string image;
+    string overview;
+    string tour_type;
+    string destination_title;
+    string country_name;
+    int total_ratings;
+    string|() average_rating;
+|};
 
 public type DBDestinationDetails record {|
     int destination_id;
@@ -108,7 +120,7 @@ public type DBDestinationDetails record {|
 |};
 
 public type RequestPassword record {|
-    string user_id;
+    string email;
     string new_password;
     string old_password;
 |};
@@ -151,6 +163,9 @@ public type LocationReviewDetails record {|
     string first_name;
     string last_name;
     string email;
+|};
+public type TotalCount record {|
+    int count;
 |};
 
 public type DBLocationDetailsWithReview record {|

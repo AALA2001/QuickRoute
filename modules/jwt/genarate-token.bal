@@ -24,7 +24,7 @@ public function generateJWT(json payload) returns error|string {
 
 }
 
-public function decodeJWT(string jwt) returns json|error {
+public isolated function decodeJWT(string jwt) returns json|error {
 
     string[] jwtParts = regex:split(jwt, "\\.");
     if jwtParts.length() != 3 {
