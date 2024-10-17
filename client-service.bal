@@ -571,7 +571,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    isolated resource function post generateItinerary/[string BALUSERTOKEN]() returns http:Response {
+    isolated resource function post generateItinerary/[string BALUSERTOKEN](int trip_plan_id) returns http:Response {
         http:Response backendResponse = new;
         boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
         if requestFilterUser is boolean && requestFilterUser == false {
