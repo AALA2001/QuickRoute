@@ -153,3 +153,7 @@ public type LocationReviewDetails record{|
     string last_name;
     string email;
 |};
+
+public type TotalCount record {|
+    int count;
+|};
