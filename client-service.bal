@@ -1,15 +1,15 @@
 import QuickRoute.db;
+import QuickRoute.filters;
+import QuickRoute.img;
 import QuickRoute.jwt;
 import QuickRoute.time;
+import QuickRoute.utils;
 
 import ballerina/data.jsondata;
 import ballerina/http;
+import ballerina/io;
 import ballerina/sql;
 import ballerinax/mysql;
-import QuickRoute.filters;
-import QuickRoute.utils;
-import ballerina/io;
-import QuickRoute.img;
 
 listener http:Listener clientSideEP = new (9093);
 
@@ -462,7 +462,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-     resource function post user/rating/addLocationReview/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
+    resource function post user/rating/addLocationReview/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
         http:Response backendResponse = new;
         map<any> formData = {};
         boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
@@ -528,7 +528,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-        resource function get  countries() returns http:Response|error {
+    resource function get countries() returns http:Response|error {
         http:Response backendResponse = new;
         stream<DBCountry, sql:Error?> dbCountries_stream = self.connection->query(`SELECT * from country ORDER BY name ASC`);
         DBCountry[] countries = [];
@@ -538,6 +538,20 @@ service /clientData on clientSideEP {
             };
         check dbCountries_stream.close();
         backendResponse.setJsonPayload(countries.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+    resource function get destinations() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBDestination, sql:Error?> dbDestinations_stream = self.connection->query(`SELECT * from destinations ORDER BY title ASC`);
+        DBDestination[] destinationsArray = [];
+        check from DBDestination destination in dbDestinations_stream
+            do {
+                destinationsArray.push(destination);
+            };
+        check dbDestinations_stream.close();
+        backendResponse.setJsonPayload(destinationsArray.toJson());
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }
