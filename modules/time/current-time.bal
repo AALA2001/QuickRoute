@@ -22,7 +22,7 @@ public isolated function validateExpierTime(string currentTime, string expiryTim
     }
 }
 
-public function getUniqueIDByCurrentTime() returns string {
+public isolated function getUniqueIDByCurrentTime() returns string {
     time:Civil civilTime = time:utcToCivil(time:utcNow());
     string currentTimeString = civilTime.hour.toString() + civilTime.minute.toString() + civilTime.second.toString();
     string[] spliited = regex:split(currentTimeString, "\\.");

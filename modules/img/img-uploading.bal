@@ -16,7 +16,7 @@ public function deleteImageFile(string filePath) returns boolean|error {
     return true;
 }
 
-public function uploadImage(byte[] image, string path, string fileName) returns string|error|io:Error? {
+public isolated function uploadImage(byte[] image, string path, string fileName) returns string|error|io:Error? {
     string newFileName = regex:replace(fileName, "\\s+", "_") + "_" + time:getUniqueIDByCurrentTime() + ".png";
     string uploadPath = "./uploads/" + path + newFileName;
 

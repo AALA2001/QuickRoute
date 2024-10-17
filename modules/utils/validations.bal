@@ -6,7 +6,7 @@ public function setErrorResponse(http:Response response, string|json message) re
     return response;
 }
 
-public function validateImageFile(mime:Entity part) returns boolean {
+public isolated function validateImageFile(mime:Entity part) returns boolean {
     string contentType = part.getContentType();
     if contentType == "image/jpeg" || contentType == "image/png" {
         return true;
@@ -14,7 +14,7 @@ public function validateImageFile(mime:Entity part) returns boolean {
     return false;
 }
 
-public function validateContentType(string contentType) returns boolean {
+public isolated function validateContentType(string contentType) returns boolean {
     return contentType.startsWith("multipart/form-data");
 }
 
