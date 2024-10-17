@@ -46,7 +46,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -100,7 +100,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -145,7 +145,7 @@ service /data on adminEP {
         } else if locationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DESTINATION_LOCATION_ALREADY_EXISTS);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CONFLICT, utils:DESTINATION_LOCATION_ALREADY_EXISTS);
         }
     }
 
@@ -158,7 +158,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -205,7 +205,7 @@ service /data on adminEP {
         } else if offerResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_OFFERS);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:OFFER_ALREADY_EXISTS);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_CONFLICT, utils:OFFER_ALREADY_EXISTS);
         }
     }
 
@@ -263,7 +263,7 @@ service /data on adminEP {
             check reviewStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, reviews.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, reviews.toJson(), true);
     }
 
     resource function get admin/getOffers/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
@@ -282,12 +282,12 @@ service /data on adminEP {
             check offersStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, offers.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, offers.toJson(), true);
     }
 
     resource function get admin/getLocations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
         http:Response response = new;
-        json[] locationWithReviews = [];
+        json[] locations = [];
 
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
             return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
@@ -306,11 +306,28 @@ service /data on adminEP {
         INNER JOIN destinations ON destinations.id = destination_location.destinations_id 
         INNER JOIN country ON country.id = destinations.country_id ORDER BY destination_location.id DESC
     `);
-
         sql:Error|() locationStreamError = locationStream.forEach(function(DBLocationDetails location) {
-            LocationReviewDetails[] reviews = [];
+            locations.push(location.toJson());
+        });
 
-            stream<LocationReviewDetails, sql:Error?> reviewStream = self.connection->query(`
+        if locationStreamError is sql:Error {
+            check locationStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        check locationStream.close();
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locations, true);
+    }
+
+    resource function get admin/getLocationReviews/[string BALUSERTOKEN](int locationId) returns error|http:Response {
+        http:Response response = new;
+        json[] locationReviews = [];
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
+
+        stream<LocationReviewDetails, sql:Error?> reviewStream = self.connection->query(`
             SELECT ratings.id AS rating_id, 
                    ratings.rating_count, 
                    ratings.review_img, 
@@ -320,31 +337,18 @@ service /data on adminEP {
                    user.email 
             FROM ratings 
             INNER JOIN user ON user.id = ratings.user_id 
-            WHERE destination_location_id = ${location.location_id}
-        `);
-            sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
-                reviews.push(review);
-            });
-
-            if reviewStreamError is sql:Error {
-                return ();
-            }
-
-            json returnObject = {
-                location: location.toJson(),
-                reviews: reviews.toJson()
-            };
-            locationWithReviews.push(returnObject);
+            WHERE destination_location_id = ${locationId}`);
+        sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
+            locationReviews.push(review.toJson());
         });
 
-        if locationStreamError is sql:Error {
-            check locationStream.close();
+        if reviewStreamError is sql:Error {
+            check reviewStream.close();
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
-        check locationStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, locationWithReviews, true);
-
+        check reviewStream.close();
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locationReviews, true);
     }
 
     resource function get admin/getDestinations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
@@ -364,7 +368,7 @@ service /data on adminEP {
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
-        return utils:returnResponseWithStatusCode(response, http:STATUS_CREATED, destinations.toJson(), true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, destinations.toJson(), true);
     }
 
     resource function put admin/updatePassword/[string BALUSERTOKEN](@http:Payload RequestPassword payload) returns http:Unauthorized & readonly|error|http:Response {
@@ -401,7 +405,7 @@ service /data on adminEP {
         if result is DBUser {
             boolean isOldPwVerify = password:verifyHmac(payload.old_password, result.password);
             if isOldPwVerify !is true {
-                return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INCORRECT_OLD_PASSWORD);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:INCORRECT_OLD_PASSWORD);
             }
             string newHashedPw = password:generateHmac(payload.new_password);
             sql:ExecutionResult|sql:Error updateResult = self.connection->execute(`UPDATE admin SET password = ${newHashedPw} WHERE email  = ${payload.email}`);
@@ -410,7 +414,7 @@ service /data on adminEP {
             }
             return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:PASSWORD_UPDATED, true);
         } else {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:USER_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:USER_NOT_FOUND);
         }
     }
 
@@ -423,7 +427,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -443,7 +447,7 @@ service /data on adminEP {
 
         DBDestination|sql:Error destinationResult = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
         if destinationResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:DESTINATION_NOT_FOUND);
         } else if destinationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
@@ -490,9 +494,9 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:DESTINATION_UPDATED, true);
             } else {
-                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:NO_FIELD);
             }
         }
         return res;
@@ -507,7 +511,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -527,7 +531,7 @@ service /data on adminEP {
 
         DBOffer|sql:Error offerResult = self.connection->queryRow(`SELECT * FROM offers WHERE id=${offerId}`);
         if offerResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:OFFER_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:OFFER_NOT_FOUND);
         } else if offerResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_OFFERS);
         }
@@ -584,7 +588,7 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:OFFER_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:OFFER_UPDATED, true);
             } else {
                 return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
             }
@@ -601,7 +605,7 @@ service /data on adminEP {
         }
 
         if !utils:validateContentType(req.getContentType()) {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_UNAUTHORIZED, utils:INVALID_CONTENT_TYPE);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_UNSUPPORTED_MEDIA_TYPE, utils:INVALID_CONTENT_TYPE);
         }
 
         map<any>|error multipartFormData = utils:parseMultipartFormData(req.getBodyParts(), formData);
@@ -621,7 +625,7 @@ service /data on adminEP {
 
         DBLocation|sql:Error locationResult = self.connection->queryRow(`SELECT * FROM destination_location WHERE id=${locationId}`);
         if locationResult is sql:NoRowsError {
-            return utils:returnResponseWithStatusCode(res, http:STATUS_NOT_FOUND, utils:DESTINATION_LOCATION_NOT_FOUND);
+            return utils:returnResponseWithStatusCode(res, http:STATUS_BAD_REQUEST, utils:DESTINATION_LOCATION_NOT_FOUND);
         } else if locationResult is sql:Error {
             return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:ERROR_FETCHING_DESTINATION_LOCATION);
         }
@@ -670,7 +674,7 @@ service /data on adminEP {
                 if updateResult is sql:Error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
                 }
-                return utils:returnResponseWithStatusCode(res, http:STATUS_CREATED, utils:DESTINATION_UPDATED, true);
+                return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:DESTINATION_UPDATED, true);
             } else {
                 return utils:returnResponseWithStatusCode(res, http:STATUS_OK, utils:NO_FIELD);
             }
@@ -678,4 +682,66 @@ service /data on adminEP {
         return res;
     }
 
+    resource function get admin/getTotalCounts/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
+        json totalCounts = {};
+        DBReview[] reviews = [];
+        json[] stats = [];
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
+
+        sql:Error|TotalCount destinationsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destinations`);
+        sql:Error|TotalCount destinationLocationsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location`);
+        sql:Error|TotalCount offersCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM offers`);
+        sql:Error|TotalCount reviewsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM reviews`);
+
+        if (destinationsCount is sql:Error ||
+        destinationLocationsCount is sql:Error ||
+        offersCount is sql:Error ||
+        reviewsCount is sql:Error) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        stream<DBReview, sql:Error?> reviewStream = self.connection->query(`SELECT reviews.id AS review_id, user.first_name, user.last_name, user.email, reviews.review FROM reviews INNER JOIN user ON user.id = reviews.user_id LIMIT 6`);
+        sql:Error? streamError = reviewStream.forEach(function(DBReview review) {
+            reviews.push(review);
+        });
+
+        if streamError is sql:Error {
+            check reviewStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        json[] tourTypesData = [];
+
+        stream<DBTourType, sql:Error?> tourTypeStream = self.connection->query(`SELECT * FROM tour_type`);
+        sql:Error? tourTypeStreamError = tourTypeStream.forEach(function(DBTourType tourType) {
+            TotalCount|sql:Error countRow = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location WHERE tour_type_id = ${tourType.id}`);
+            if countRow is TotalCount {
+                tourTypesData.push({"name": tourType.'type, "value": countRow.count}.toJson());
+            }
+        });
+
+        if tourTypeStreamError is sql:Error {
+            check tourTypeStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        json tourTypes = {"label": "Tour Types", "data": tourTypesData.toJson()};
+        stats.push(tourTypes);
+
+        totalCounts = {
+            "destinations": destinationsCount.count,
+            "locations": destinationLocationsCount.count,
+            "offers": offersCount.count,
+            "reviews": reviewsCount.count,
+            "reviewsList": reviews.toJson(),
+            "stats": stats
+        };
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, totalCounts, true);
+    }
+
 }
+
