@@ -714,7 +714,23 @@ service /data on adminEP {
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
-        
+        json[] tourTypesData = [];
+
+        stream<DBTourType, sql:Error?> tourTypeStream = self.connection->query(`SELECT * FROM tour_type`);
+        sql:Error? tourTypeStreamError = tourTypeStream.forEach(function(DBTourType tourType) {
+            TotalCount|sql:Error countRow = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location WHERE tour_type_id = ${tourType.id}`);
+            if countRow is TotalCount {
+                tourTypesData.push({"name": tourType.'type, "value": countRow.count}.toJson());
+            }
+        });
+
+        if tourTypeStreamError is sql:Error {
+            check tourTypeStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        json tourTypes = {"label": "Tour Types", "data": tourTypesData.toJson()};
+        stats.push(tourTypes);
 
         totalCounts = {
             "destinations": destinationsCount.count,
@@ -722,7 +738,7 @@ service /data on adminEP {
             "offers": offersCount.count,
             "reviews": reviewsCount.count,
             "reviewsList": reviews.toJson(),
-            
+            "stats": stats
         };
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, totalCounts, true);
     }
