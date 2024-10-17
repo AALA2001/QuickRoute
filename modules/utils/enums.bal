@@ -77,3 +77,9 @@ public enum OFFER_ERRORS {
     INVALID_OFFER_ID = "Invalid offer Id",
     OFFER_NOT_FOUND = "Offer not found"
 }
+
+public enum RATING_ERRORS {
+    INVALID_USER_ID = "Invalid user Id",
+    INVALID_RATING_COUNT = "Invalid rating count",
+    REVIEW_CREATED = "Successfully added the review"
+}
