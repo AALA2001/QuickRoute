@@ -435,5 +435,28 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
+    isolated resource function get locationReviews(string location_id) returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<LocationReviewDetails, sql:Error?> dbLocationReview_strem = self.connection->query(`SELECT ratings.id AS rating_id, 
+                   ratings.rating_count, 
+                   ratings.review_img, 
+                   ratings.review, 
+                   user.first_name, 
+                   user.last_name, 
+                   user.email 
+            FROM ratings 
+            INNER JOIN user ON user.id = ratings.user_id 
+            WHERE destination_location_id =${location_id}`);
+        LocationReviewDetails[] LocationReviews = [];
+        check from LocationReviewDetails dblocationReview in dbLocationReview_strem
+            do {
+                LocationReviews.push(dblocationReview);
+            };
+        check dbLocationReview_strem.close();
+        backendResponse.setJsonPayload(LocationReviews.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
 }
 
