@@ -556,5 +556,20 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
+        resource function get tourTypes() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBTourType, sql:Error?> tourTypes_stream = self.connection->query(`SELECT * from tour_type ORDER BY type ASC`);
+        DBTourType[] tourTypesArray = [];
+        check from DBTourType tourType in tourTypes_stream
+            do {
+                tourTypesArray.push(tourType);
+            };
+        check tourTypes_stream.close();
+        backendResponse.setJsonPayload(tourTypesArray.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
+
 }
 
