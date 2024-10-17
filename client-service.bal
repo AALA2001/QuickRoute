@@ -1,3 +1,4 @@
+import QuickRoute.OpenAI;
 import QuickRoute.db;
 import QuickRoute.filters;
 import QuickRoute.img;
@@ -462,7 +463,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    resource function post user/rating/addLocationReview/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
+    isolated resource function post user/rating/addLocationReview/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
         http:Response backendResponse = new;
         map<any> formData = {};
         boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
@@ -556,7 +557,7 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-        resource function get tourTypes() returns http:Response|error {
+    resource function get tourTypes() returns http:Response|error {
         http:Response backendResponse = new;
         stream<DBTourType, sql:Error?> tourTypes_stream = self.connection->query(`SELECT * from tour_type ORDER BY type ASC`);
         DBTourType[] tourTypesArray = [];
@@ -570,6 +571,20 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-
+    isolated resource function post generateItinerary/[string BALUSERTOKEN]() returns http:Response {
+        http:Response backendResponse = new;
+        boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
+        if requestFilterUser is boolean && requestFilterUser == false {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_UNAUTHORIZED, "Token expired");
+        }
+        json|error? result = OpenAI:generateText("who is tony stark");
+        if (result is json) {
+            backendResponse.setJsonPayload(result);
+            backendResponse.statusCode = http:STATUS_OK;
+        } else {
+            backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+        }
+        return backendResponse;
+    }
 }
 

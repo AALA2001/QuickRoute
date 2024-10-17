@@ -397,6 +397,7 @@ dependencies = [
 ]
 modules = [
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute"},
+	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.OpenAI"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.db"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.email"},
 	{org = "virulnirmala", packageName = "QuickRoute", moduleName = "QuickRoute.filters"},
