@@ -704,6 +704,16 @@ service /data on adminEP {
             return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
         }
 
+        stream<DBReview, sql:Error?> reviewStream = self.connection->query(`SELECT reviews.id AS review_id, user.first_name, user.last_name, user.email, reviews.review FROM reviews INNER JOIN user ON user.id = reviews.user_id LIMIT 6`);
+        sql:Error? streamError = reviewStream.forEach(function(DBReview review) {
+            reviews.push(review);
+        });
+
+        if streamError is sql:Error {
+            check reviewStream.close();
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
         
 
         totalCounts = {
@@ -711,6 +721,7 @@ service /data on adminEP {
             "locations": destinationLocationsCount.count,
             "offers": offersCount.count,
             "reviews": reviewsCount.count,
+            "reviewsList": reviews.toJson(),
             
         };
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, totalCounts, true);
