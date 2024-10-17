@@ -528,5 +528,19 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
+        resource function get  countries() returns http:Response|error {
+        http:Response backendResponse = new;
+        stream<DBCountry, sql:Error?> dbCountries_stream = self.connection->query(`SELECT * from country ORDER BY name ASC`);
+        DBCountry[] countries = [];
+        check from DBCountry country in dbCountries_stream
+            do {
+                countries.push(country);
+            };
+        check dbCountries_stream.close();
+        backendResponse.setJsonPayload(countries.toJson());
+        backendResponse.statusCode = http:STATUS_OK;
+        return backendResponse;
+    }
+
 }
 
