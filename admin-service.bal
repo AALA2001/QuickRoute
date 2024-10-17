@@ -682,4 +682,39 @@ service /data on adminEP {
         return res;
     }
 
+    resource function get admin/getTotalCounts/[string BALUSERTOKEN]() returns error|http:Response {
+        http:Response response = new;
+        json totalCounts = {};
+        DBReview[] reviews = [];
+        json[] stats = [];
+
+        if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
+        }
+
+        sql:Error|TotalCount destinationsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destinations`);
+        sql:Error|TotalCount destinationLocationsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location`);
+        sql:Error|TotalCount offersCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM offers`);
+        sql:Error|TotalCount reviewsCount = self.connection->queryRow(`SELECT COUNT(id) AS count FROM reviews`);
+
+        if (destinationsCount is sql:Error ||
+        destinationLocationsCount is sql:Error ||
+        offersCount is sql:Error ||
+        reviewsCount is sql:Error) {
+            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        
+
+        totalCounts = {
+            "destinations": destinationsCount.count,
+            "locations": destinationLocationsCount.count,
+            "offers": offersCount.count,
+            "reviews": reviewsCount.count,
+            
+        };
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, totalCounts, true);
+    }
+
 }
+
