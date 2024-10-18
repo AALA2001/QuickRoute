@@ -221,3 +221,7 @@ public type userOffers record {|
     string destinations_name;
     string country;
 |};
+
+public type locations record {|
+    string title;
+|};
