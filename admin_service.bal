@@ -37,7 +37,7 @@ service /data on adminEP {
         _ = checkpanic self.connection.close();
     }
 
-    resource function post admin/addDestination/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
+    isolated resource function post admin/addDestination/[string BALUSERTOKEN](http:Request req) returns http:Response|error? {
         http:Response res = new;
         map<any> formData = {};
 
@@ -91,7 +91,7 @@ service /data on adminEP {
         return res;
     }
 
-    resource function post admin/addLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+    isolated resource function post admin/addLocation/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
         http:Response res = new;
         map<any> formData = {};
 
@@ -149,7 +149,7 @@ service /data on adminEP {
         }
     }
 
-    resource function post admin/addOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+    isolated resource function post admin/addOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
         http:Response res = new;
         map<any> formData = {};
 
@@ -502,7 +502,7 @@ service /data on adminEP {
         return res;
     }
 
-    resource function put admin/updateOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
+    isolated resource function put admin/updateOffer/[string BALUSERTOKEN](http:Request req) returns http:Unauthorized & readonly|error|http:Response {
         http:Response res = new;
         map<any> formData = {};
 

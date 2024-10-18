@@ -11,7 +11,7 @@ public type UserDTO record {|
     string expiryTime;
 |};
 
-public function requestFilterAdmin(string BALUSERTOKEN) returns boolean|error {
+public isolated function requestFilterAdmin(string BALUSERTOKEN) returns boolean|error {
     json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
     UserDTO payload = check jsondata:parseString(decodeJWT.toString());
     if payload.userType is "admin" {

@@ -4,7 +4,7 @@ import ballerina/file;
 import ballerina/io;
 import ballerina/regex;
 
-public function deleteImageFile(string filePath) returns boolean|error {
+public isolated function deleteImageFile(string filePath) returns boolean|error {
     boolean fileExists = check file:test("./uploads/"+filePath, file:EXISTS);
     if !fileExists {
         return false;
