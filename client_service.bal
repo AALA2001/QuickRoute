@@ -99,7 +99,6 @@ service /clientData on clientSideEP {
                 backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
                 return backendResponse;
             } else {
-                if result is DBUser {
                     stream<UserHasPlans, sql:Error?> user_has_plans_stream = self.connection->query(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name,user_id FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id}`);
                     UserHasPlans[] QuickRouteUserHasPlans = [];
                     check from UserHasPlans user_has_plan in user_has_plans_stream
@@ -116,7 +115,6 @@ service /clientData on clientSideEP {
                         backendResponse.statusCode = http:STATUS_OK;
                         return backendResponse;
                     }
-                }
             }
         } else {
             backendResponse.setJsonPayload({success: false, message: "token expired"});
@@ -140,7 +138,6 @@ service /clientData on clientSideEP {
                 backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
                 return backendResponse;
             } else {
-                if result is DBUser {
                     UserHasPlans|sql:Error tripPlanResult = self.connection->queryRow(`SELECT trip_plan.id AS plan_id,trip_plan.plan_name,user_id FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id  WHERE user_id = ${result.id} AND trip_plan_id = ${newPlanName.plan_id}`);
                     if tripPlanResult is sql:NoRowsError {
                         backendResponse.setJsonPayload({success: false, message: "plan not found"});
@@ -151,14 +148,11 @@ service /clientData on clientSideEP {
                         backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
                         return backendResponse;
                     } else {
-                        if tripPlanResult is UserHasPlans {
                             _ = check self.connection->execute(`UPDATE trip_plan SET plan_name = (${newPlanName.new_name}) WHERE id = ${newPlanName.plan_id}`);
                             backendResponse.setJsonPayload({success: true, message: "plan renamed"});
                             backendResponse.statusCode = http:STATUS_OK;
                             return backendResponse;
-                        }
                     }
-                }
             }
         } else {
             backendResponse.setJsonPayload({success: false, message: "token expired"});
