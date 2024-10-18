@@ -4,12 +4,13 @@ import ballerina/file;
 import ballerina/io;
 import ballerina/regex;
 
+
 public isolated function deleteImageFile(string filePath) returns boolean|error {
-    boolean fileExists = check file:test("./uploads/"+filePath, file:EXISTS);
+    boolean fileExists = check file:test(".resources/uploads/"+filePath, file:EXISTS);
     if !fileExists {
         return false;
     }
-    error? result = file:remove("./uploads/"+filePath);
+    error? result = file:remove("./resources/uploads/"+filePath);
     if result is error {
         return false;
     }
@@ -18,7 +19,7 @@ public isolated function deleteImageFile(string filePath) returns boolean|error 
 
 public isolated function uploadImage(byte[] image, string path, string fileName) returns string|error|io:Error? {
     string newFileName = regex:replace(fileName, "\\s+", "_") + "_" + time:getUniqueIDByCurrentTime() + ".png";
-    string uploadPath = "./uploads/" + path + newFileName;
+    string uploadPath = "./resources/uploads/" + path + newFileName;
 
     check io:fileWriteBytes(uploadPath, image);
     return path + newFileName;
