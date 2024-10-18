@@ -11,6 +11,7 @@ passsword = "Hiru2005@"
 database = "QuickRoute"
 port = 18125
 
+
 # [QuickRoute.email]	
 # server = "smtp.gmail.com"
 # username = "hiranyagunawardhane@gmail.com"
