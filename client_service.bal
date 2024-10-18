@@ -69,7 +69,7 @@ service /clientData on clientSideEP {
                         return backendResponse;
                     }
                 }
-                backendResponse.setJsonPayload({success: true, message: "plan created",planName,planId:lastInsertId});
+                backendResponse.setJsonPayload({success: true, message: "plan created", planName, planId: lastInsertId});
                 backendResponse.statusCode = http:STATUS_CREATED;
                 return backendResponse;
             } else {
@@ -579,16 +579,28 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    resource function post generateItinerary/[string BALUSERTOKEN](int trip_plan_id) returns http:Response {
+    resource function post generateItinerary/[string BALUSERTOKEN](int trip_plan_id) returns http:Response|error {
         http:Response backendResponse = new;
         boolean|error requestFilterUser = filters:requestFilterUser(BALUSERTOKEN);
+
         if requestFilterUser is boolean && requestFilterUser == false {
             return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_UNAUTHORIZED, "Token expired");
         }
-        json|error? result = OpenAI:generateText("who is tony stark");
+        string[] locations = ["Ruwanwelisaya Stupa","Fushimi Inari Shrine","Sydney Opera House","Jaya Sri Maha Bodhi"];
+        string itineraryPrompt = "Generate two suggested travel itineraries based on the provided location names. Group locations that belong to the same destination (e.g., Eiffel Tower and Louvre Museum are in Paris). Ensure each itinerary is arranged in a cost-effective order, considering current conditions like weather, local events, and popular attractions. The itinerary should be structured by days, with each day's item including a title (a summary of the day), a description (a short summary of the activities for that day), and an estimated date. Consider reasonable travel times between countries (e.g., a full day of travel between Sri Lanka and Japan) and add buffer days if needed for flights or rest. Ensure that **all provided locations** are included in both itineraries. Return the result as a JSON object.\n\nInputs:"+locations.toString()+"\n\nOutput format:\nThe output should be a JSON object structured as follows:\n{\"itineraries\": [{ \"itinerary\": [ { \"day\": \"Day 1\",\"title\": \"Exploring Paris\",\"description\": \"Visit the iconic Eiffel Tower and the world-renowned Louvre Museum.\" }, {\"day\": \"Day 2\", \"title\": \"Discovering Rome\", \"description\": \"Explore the ancient Colosseum and the magnificent Vatican City.\"}, { \"day\": \"Day 3\", \"title\": \"Adventuring in New York\", \"description\": \"Enjoy a visit to the Statue of Liberty and a stroll through Central Park.\" }]}, {\"itinerary\": [{\"day\": \"Day 1\", \"title\": \"A Day in the City of Lights\",  \"description\": \"Start with the Eiffel Tower, followed by the Louvre Museum.\"  }, { \"day\": \"Day 2\", \"title\": \"Ancient Wonders of Rome\", \"description\": \"Visit the Colosseum and the Vatican City.\" }, { \"day\": \"Day 3\", \"title\": \"New York Adventures\", \"description\": \"Explore Central Park and the Statue of Liberty.\"}]}]}";
+        json|error result = OpenAI:generateText(itineraryPrompt);
+
         if (result is json) {
-            backendResponse.setJsonPayload(result);
-            backendResponse.statusCode = http:STATUS_OK;
+            json choicesArray = check result.choices;
+            if (choicesArray is json[]) {
+                json firstChoice = choicesArray[0];
+                string content = (check firstChoice.message.content).toString();
+                json jsonResponse = check jsondata:parseString(content);
+                backendResponse.setJsonPayload(jsonResponse);
+                backendResponse.statusCode = http:STATUS_OK;
+            } else {
+                backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+            }
         } else {
             backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
         }

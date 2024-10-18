@@ -162,7 +162,6 @@ service /auth on mainEP {
                         expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    io:println(token);
                     io:println(url:decode(token, "UTF-8"));
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
