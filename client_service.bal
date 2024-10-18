@@ -63,17 +63,13 @@ service /clientData on clientSideEP {
                     anydata|sql:Error existingPlan = self.connection->queryRow(`SELECT * FROM user_has_trip_plans INNER JOIN trip_plan ON user_has_trip_plans.trip_plan_id = trip_plan.id WHERE plan_name = ${planName} AND user_id = ${result.id}`);
                     if existingPlan is sql:NoRowsError {
                         _ = check self.connection->execute(`INSERT INTO  user_has_trip_plans (trip_plan_id,user_id) VALUES (${lastInsertId},${result.id})`);
-                    } else if existingPlan is sql:Error {
-                        backendResponse.setJsonPayload({success: false, message: "database error"});
-                        backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-                        return backendResponse;
                     } else {
                         backendResponse.setJsonPayload({success: false, message: "plan already exists"});
                         backendResponse.statusCode = http:STATUS_CONFLICT;
                         return backendResponse;
                     }
                 }
-                backendResponse.setJsonPayload({success: true, message: "plan created"});
+                backendResponse.setJsonPayload({success: true, message: "plan created",planName,planId:lastInsertId});
                 backendResponse.statusCode = http:STATUS_CREATED;
                 return backendResponse;
             } else {
