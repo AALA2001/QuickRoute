@@ -378,17 +378,26 @@ service /clientData on clientSideEP {
         return backendResponse;
     }
 
-    isolated resource function get destinationLocation(string destination_id) returns http:Response|error {
+    resource function get destinationLocation(string destination_id) returns http:Response|error {
         http:Response backendResponse = new;
-        stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE destination_location.id = ${destination_id}  GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name `);
+        DBLocationDetailsWithRatings|sql:Error dbDestinationLocation = self.connection->queryRow(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE destination_location.id = ${destination_id}  GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name `);
         DBLocationDetailsWithRatings[] QuickRouteDestination = [];
-        check from DBLocationDetailsWithRatings dbDestination in dbDestination_stream
-            do {
-                QuickRouteDestination.push(dbDestination);
+        if dbDestinationLocation is DBLocationDetailsWithRatings {
+            QuickRouteDestination.push(dbDestinationLocation);
+            stream<DBLocationDetailsWithRatings, sql:Error?> dbRelatedLocations_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview,  tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM  destination_location  INNER JOIN  destinations ON destinations.id = destination_location.destinations_id INNER JOIN  country ON destinations.country_id = country.id INNER JOIN  tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN  ratings ON destination_location.id = ratings.destination_location_id WHERE tour_type.type = ${dbDestinationLocation.tour_type}  AND destinations.title = ${dbDestinationLocation.destination_title} GROUP BY destination_location.id,  destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name LIMIT 4`);
+            DBLocationDetailsWithRatings[] RelatedLocations = [];
+            check from DBLocationDetailsWithRatings dbRelatedLocation in dbRelatedLocations_stream
+                do {
+                    RelatedLocations.push(dbRelatedLocation);
+                };
+            check dbRelatedLocations_stream.close();
+            json objectRes = {
+                "locations": QuickRouteDestination.toJson(),
+                "relatedLocations": RelatedLocations.toJson()
             };
-        check dbDestination_stream.close();
-        backendResponse.setJsonPayload(QuickRouteDestination.toJson());
-        backendResponse.statusCode = http:STATUS_OK;
+            backendResponse.setJsonPayload(objectRes.toJson());
+            backendResponse.statusCode = http:STATUS_OK;
+        }
         return backendResponse;
     }
 
@@ -439,6 +448,7 @@ service /clientData on clientSideEP {
         backendResponse.statusCode = http:STATUS_OK;
         return backendResponse;
     }
+
 
     isolated resource function get locationReviews(string location_id) returns http:Response|error {
         http:Response backendResponse = new;
@@ -586,5 +596,38 @@ service /clientData on clientSideEP {
         }
         return backendResponse;
     }
+    
+    resource function get destination(int destinationId) returns error|http:Response {
+        http:Response backendResponse = new;
+
+        DBDestination|sql:Error queryRow = self.connection->queryRow(`SELECT * FROM destinations WHERE id=${destinationId}`);
+        if queryRow is sql:Error {
+            return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
+        }
+
+        stream<userOffers, sql:Error?> user_offers_stream = self.connection->query(`SELECT offers.from_Date,offers.to_Date,offers.title AS offer_title,offers.image AS offer_image, destination_location.title AS destinations_name , country.name AS country FROM offers INNER JOIN destination_location ON destination_location.id = offers.destination_location_id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON country.id = destinations.country_id WHERE destinations.id=${destinationId} ORDER BY offers.to_Date DESC LIMIT 3`);
+        userOffers[] offers = [];
+
+        check from userOffers offer in user_offers_stream
+            do {
+                offers.push(offer);
+            };
+
+        stream<DBLocationDetailsWithRatings, sql:Error?> dbDestination_stream = self.connection->query(`SELECT destination_location.id AS location_id, destination_location.title AS title, destination_location.image AS image, destination_location.overview AS overview, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name, COUNT(ratings.rating_count) AS total_ratings, ROUND(AVG(ratings.rating_count), 1) AS average_rating FROM destination_location INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON destinations.country_id = country.id INNER JOIN tour_type ON destination_location.tour_type_id = tour_type.id LEFT JOIN ratings ON destination_location.id = ratings.destination_location_id WHERE destinations.id=${destinationId} GROUP BY destination_location.id, destination_location.title, destination_location.image, destination_location.overview, tour_type.type, destinations.title, country.name`);
+        DBLocationDetailsWithRatings[] QuickRouteDestination = [];
+        check from DBLocationDetailsWithRatings dbDestination in dbDestination_stream
+            do {
+                QuickRouteDestination.push(dbDestination);
+            };
+        check dbDestination_stream.close();
+
+        json reponseObj = {
+            destinationLocations: QuickRouteDestination.toJson(),
+            offers: offers.toJson(),
+            destination: queryRow.toJson()
+        };
+        return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_OK, reponseObj, true);
+    }
+
 }
 
