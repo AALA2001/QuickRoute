@@ -62,7 +62,7 @@ service /auth on mainEP {
         _ = checkpanic self.connection.close();
     }
 
-    resource function post user/register(@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
+    isolated resource function post user/register(@http:Payload RequestUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -128,7 +128,7 @@ service /auth on mainEP {
         return response;
     }
 
-    resource function post user/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
+    isolated resource function post user/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};
@@ -177,7 +177,7 @@ service /auth on mainEP {
         return response;
     }
 
-    resource function post admin/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
+    isolated resource function post admin/login(@http:Payload LoginUser user) returns http:Response|http:Unauthorized|error {
         http:Response response = new;
         json responseObj = {};
         map<string> errorMsg = {};

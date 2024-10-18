@@ -7,7 +7,7 @@ public isolated function currentTimeStamp() returns string {
     return currentTimeStamp;
 }
 
-public function expierTimeStamp() returns string {
+public isolated function expierTimeStamp() returns string {
     time:Utc currTime = time:utcNow();
     time:Utc expiryTime = time:utcAddSeconds(currTime, 1800);
     string expiryTimeString = time:utcToString(expiryTime);

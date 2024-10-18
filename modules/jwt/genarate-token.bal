@@ -6,7 +6,7 @@ import ballerina/url;
 
 configurable string secret = ?;
 
-public function generateJWT(json payload) returns error|string {
+public isolated function generateJWT(json payload) returns error|string {
     json header = {
         "alg": "HS256",
         "typ": "JWT"

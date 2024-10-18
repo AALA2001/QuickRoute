@@ -2,7 +2,7 @@ import ballerina/crypto;
 
 configurable string secret = ?;
 
-public function generateHmac(string password) returns string {
+public isolated function generateHmac(string password) returns string {
     do {
         byte[] data = password.toBytes();
         byte[] key = secret.toBytes();
@@ -13,7 +13,7 @@ public function generateHmac(string password) returns string {
     }
 }
 
-public function verifyHmac(string passsword, string hashPassword) returns boolean {
+public isolated function verifyHmac(string passsword, string hashPassword) returns boolean {
     do {
         string generatedHmac = generateHmac(passsword);
         return generatedHmac == hashPassword;
