@@ -29,7 +29,7 @@ listener http:Listener mainEP = new (9091);
 }
 service / on mainEP {
     resource function get [string folderName]/[string imageName]() returns http:Response|error {
-        string imagePath = "uploads/" + folderName + "/" + imageName;
+        string imagePath = "resources/uploads/" + folderName + "/" + imageName;
         byte[] imageContent = check io:fileReadBytes(imagePath);
         http:Response res = new;
         res.setPayload(imageContent);
