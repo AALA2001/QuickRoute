@@ -5,18 +5,18 @@ secret = "3f2e4c5b7d9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8g9h1i2j3k4l5m6"
 secret = "ab12cd34ef56gh78ij90kl12mn34op56qr78st90uv12wx34yz56ab78cd90ef12"
 
 [QuickRoute.db]	
-host = "127.0.0.1"
-username = "root"	
-passsword = "200528100634@Vn"
-database = "QuickRoute"
-port = 3306
+host = ""
+username = ""	
+passsword = ""
+database = ""
+port = 1234
 
 
 [QuickRoute.email]	
-server = "smtp.gmail.com"
-username = "hiranyagunawardhane@gmail.com"
-password = "hguy gxbe gxmu dlkb"
+server = ""
+username = ""
+password = ""
 
 [QuickRoute.OpenAI]
-API_TOKEN = "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"
+API_TOKEN = ""
 API_URL = "https://api.openai.com/v1/chat/completions"
