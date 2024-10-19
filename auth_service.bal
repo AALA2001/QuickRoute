@@ -10,7 +10,6 @@ import ballerina/io;
 import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
-import ballerina/url;
 import ballerinax/mysql;
 
 http:ClientConfiguration authEPConfig = {
@@ -29,7 +28,7 @@ listener http:Listener mainEP = new (9091);
 }
 service / on mainEP {
     resource function get [string folderName]/[string imageName]() returns http:Response|error {
-        string imagePath = "uploads/" + folderName + "/" + imageName;
+        string imagePath = "resources/uploads/" + folderName + "/" + imageName;
         byte[] imageContent = check io:fileReadBytes(imagePath);
         http:Response res = new;
         res.setPayload(imageContent);
@@ -162,8 +161,6 @@ service /auth on mainEP {
                         expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    io:println(token);
-                    io:println(url:decode(token, "UTF-8"));
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};

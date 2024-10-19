@@ -158,7 +158,7 @@ public type DBPlan record {|
 public type LocationReviewDetails record {|
     int rating_id;
     int rating_count;
-    string review_img;
+    string? review_img;
     string review;
     string first_name;
     string last_name;
@@ -220,4 +220,8 @@ public type userOffers record {|
     string offer_image;
     string destinations_name;
     string country;
+|};
+
+public type locations record {|
+    string title;
 |};

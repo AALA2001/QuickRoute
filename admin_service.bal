@@ -211,20 +211,16 @@ service /data on adminEP {
 
     resource function get admin/getCountries/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {
         http:Response response = new;
-        DBCountry[] countries = [];
-
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
             return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
         }
-
-        stream<DBCountry, sql:Error?> countryStream = self.connection->query(`SELECT * FROM country`);
-        sql:Error? streamError = countryStream.forEach(function(DBCountry country) {
-            countries.push(country);
-        });
-        if streamError is sql:Error {
-            check countryStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
+        stream<DBCountry, sql:Error?> countryStream = self.connection->query(`SELECT * FROM country ORDER BY name ASC`);
+        DBCountry[] countries = [];
+        check from DBCountry country in countryStream
+            do {
+                countries.push(country);
+            };
+        check countryStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, countries.toJson(), true);
     }
 
@@ -235,15 +231,12 @@ service /data on adminEP {
         if (!check filters:requestFilterAdmin(BALUSERTOKEN)) {
             return utils:returnResponseWithStatusCode(response, http:STATUS_UNAUTHORIZED, utils:UNAUTHORIZED_REQUEST);
         }
-
-        stream<DBTourType, sql:Error?> tourTypeStream = self.connection->query(`SELECT * FROM tour_type`);
-        sql:Error? streamError = tourTypeStream.forEach(function(DBTourType country) {
-            tourTypes.push(country);
-        });
-        if streamError is sql:Error {
-            check tourTypeStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
+        stream<DBTourType, sql:Error?> tourTypeStream = self.connection->query(`SELECT * FROM tour_type ORDER BY type ASC`);
+        check from DBTourType tourType in tourTypeStream
+            do {
+                tourTypes.push(tourType);
+            };
+        check tourTypeStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, tourTypes.toJson(), true);
     }
 
@@ -256,13 +249,11 @@ service /data on adminEP {
         }
 
         stream<DBReview, sql:Error?> reviewStream = self.connection->query(`SELECT reviews.id AS review_id, user.first_name, user.last_name, user.email, reviews.review FROM reviews INNER JOIN user ON user.id = reviews.user_id`);
-        sql:Error? streamError = reviewStream.forEach(function(DBReview review) {
-            reviews.push(review);
-        });
-        if streamError is sql:Error {
-            check reviewStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
+        check from DBReview review in reviewStream
+            do {
+                reviews.push(review);
+            };
+        check reviewStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, reviews.toJson(), true);
     }
 
@@ -275,13 +266,11 @@ service /data on adminEP {
         }
 
         stream<DBOfferDetals, sql:Error?> offersStream = self.connection->query(`SELECT offers.id AS offer_id, offers.from_Date, offers.to_Date, offers.title, offers.image, destination_location.title AS location_title, tour_type.type AS tour_type, destinations.title AS destination_title, country.name AS country_name FROM offers INNER JOIN destination_location ON destination_location.id = offers.destination_location_id INNER JOIN tour_type ON tour_type.id=destination_location.tour_type_id INNER JOIN destinations ON destinations.id = destination_location.destinations_id INNER JOIN country ON country.id = destinations.country_id ORDER BY offers.id DESC`);
-        sql:Error? streamError = offersStream.forEach(function(DBOfferDetals offer) {
-            offers.push(offer);
-        });
-        if streamError is sql:Error {
-            check offersStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
+        check from DBOfferDetals offer in offersStream
+            do {
+                offers.push(offer);
+            };
+        check offersStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, offers.toJson(), true);
     }
 
@@ -306,15 +295,10 @@ service /data on adminEP {
         INNER JOIN destinations ON destinations.id = destination_location.destinations_id 
         INNER JOIN country ON country.id = destinations.country_id ORDER BY destination_location.id DESC
     `);
-        sql:Error|() locationStreamError = locationStream.forEach(function(DBLocationDetails location) {
-            locations.push(location.toJson());
-        });
-
-        if locationStreamError is sql:Error {
-            check locationStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
-
+        check from DBLocationDetails location in locationStream
+            do {
+                locations.push(location);
+            };
         check locationStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locations, true);
     }
@@ -338,15 +322,10 @@ service /data on adminEP {
             FROM ratings 
             INNER JOIN user ON user.id = ratings.user_id 
             WHERE destination_location_id = ${locationId}`);
-        sql:Error? reviewStreamError = reviewStream.forEach(function(LocationReviewDetails review) {
-            locationReviews.push(review.toJson());
-        });
-
-        if reviewStreamError is sql:Error {
-            check reviewStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
-
+        check from LocationReviewDetails review in reviewStream
+            do {
+                locationReviews.push(review);
+            };
         check reviewStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locationReviews, true);
     }
@@ -360,14 +339,11 @@ service /data on adminEP {
         }
 
         stream<DBDestinationDetails, sql:Error?> destinationStream = self.connection->query(`SELECT destinations.id AS destination_id, destinations.title, destinations.image, destinations.description, country.name AS country_name FROM destinations INNER JOIN  country ON country.id = destinations.country_id ORDER BY destinations.id DESC`);
-        sql:Error? streamError = destinationStream.forEach(function(DBDestinationDetails destination) {
-            destinations.push(destination);
-        });
-        if streamError is sql:Error {
-            check destinationStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
-
+        check from DBDestinationDetails destination in destinationStream
+            do {
+                destinations.push(destination);
+            };
+        check destinationStream.close();
         return utils:returnResponseWithStatusCode(response, http:STATUS_OK, destinations.toJson(), true);
     }
 
@@ -468,7 +444,6 @@ service /data on adminEP {
                 if isDeleteImage is false || isDeleteImage is error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:IMAGE_DELETE);
                 }
-                io:println(formData["title"]);
                 string imageName = formData["title"] !is () ? <string>formData["title"] : destinationResult.title;
                 string|error|io:Error? uploadedImage = img:uploadImage(<byte[]>formData["file"], "destinations/", imageName);
 
@@ -705,30 +680,23 @@ service /data on adminEP {
         }
 
         stream<DBReview, sql:Error?> reviewStream = self.connection->query(`SELECT reviews.id AS review_id, user.first_name, user.last_name, user.email, reviews.review FROM reviews INNER JOIN user ON user.id = reviews.user_id LIMIT 6`);
-        sql:Error? streamError = reviewStream.forEach(function(DBReview review) {
-            reviews.push(review);
-        });
-
-        if streamError is sql:Error {
-            check reviewStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
+        check from DBReview review in reviewStream
+            do {
+                reviews.push(review);
+            };
+        check reviewStream.close();
 
         json[] tourTypesData = [];
 
         stream<DBTourType, sql:Error?> tourTypeStream = self.connection->query(`SELECT * FROM tour_type`);
-        sql:Error? tourTypeStreamError = tourTypeStream.forEach(function(DBTourType tourType) {
-            TotalCount|sql:Error countRow = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location WHERE tour_type_id = ${tourType.id}`);
-            if countRow is TotalCount {
-                tourTypesData.push({"name": tourType.'type, "value": countRow.count}.toJson());
-            }
-        });
-
-        if tourTypeStreamError is sql:Error {
-            check tourTypeStream.close();
-            return utils:returnResponseWithStatusCode(response, http:STATUS_INTERNAL_SERVER_ERROR, utils:DATABASE_ERROR);
-        }
-
+        check from DBTourType tourType in tourTypeStream
+            do {
+                TotalCount|sql:Error countRow = self.connection->queryRow(`SELECT COUNT(id) AS count FROM destination_location WHERE tour_type_id = ${tourType.id}`);
+                if countRow is TotalCount {
+                    tourTypesData.push({"name": tourType.'type, "value": countRow.count}.toJson());
+                }
+            };
+        check tourTypeStream.close();
         json tourTypes = {"label": "Tour Types", "data": tourTypesData.toJson()};
         stats.push(tourTypes);
 
