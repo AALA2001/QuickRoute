@@ -444,7 +444,6 @@ service /data on adminEP {
                 if isDeleteImage is false || isDeleteImage is error {
                     return utils:returnResponseWithStatusCode(res, http:STATUS_INTERNAL_SERVER_ERROR, utils:IMAGE_DELETE);
                 }
-                io:println(formData["title"]);
                 string imageName = formData["title"] !is () ? <string>formData["title"] : destinationResult.title;
                 string|error|io:Error? uploadedImage = img:uploadImage(<byte[]>formData["file"], "destinations/", imageName);
 

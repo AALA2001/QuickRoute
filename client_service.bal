@@ -11,6 +11,7 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/sql;
 import ballerinax/mysql;
+import QuickRoute.email;
 
 listener http:Listener clientSideEP = new (9093);
 
@@ -644,5 +645,37 @@ service /clientData on clientSideEP {
         return utils:returnResponseWithStatusCode(backendResponse, http:STATUS_OK, reponseObj, true);
     }
 
+    isolated resource function get user/sendEmail/[string BALUSERTOKEN]() returns http:Response|error {
+        json decodeJWT = check jwt:decodeJWT(BALUSERTOKEN);
+        UserDTO payload = check jsondata:parseString(decodeJWT.toString());
+        http:Response backendResponse = new;
+        if (time:validateExpierTime(time:currentTimeStamp(), payload.expiryTime)) {
+            DBUser|sql:Error result = self.connection->queryRow(`SELECT * FROM user WHERE email = (${payload.email})`);
+            if result is sql:NoRowsError {
+                backendResponse.setJsonPayload({success: false, message: "user not found"});
+                backendResponse.statusCode = http:STATUS_NOT_FOUND;
+                return backendResponse;
+            } else if result is sql:Error {
+                backendResponse.setJsonPayload({success: false, message: "database error"});
+                backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+                return backendResponse;
+            } else {
+                boolean sendEmail = email:sendEmail(subject = "Thank you for choosing QuickRoute AI Base Itinerary Planner",body = "",to = result.email);
+                if sendEmail {
+                backendResponse.setJsonPayload({success: true, message: "email sent"});
+                backendResponse.statusCode = http:STATUS_OK;
+                return backendResponse;
+                } else {
+                    backendResponse.setJsonPayload({success: false, message: "email not sent"});
+                    backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+                    return backendResponse;
+                }
+            }
+        } else {
+            backendResponse.setJsonPayload({success: false, message: "token expired"});
+            backendResponse.statusCode = http:STATUS_UNAUTHORIZED;
+            return backendResponse;
+        }
+    }
 }
 

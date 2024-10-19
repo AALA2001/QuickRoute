@@ -10,7 +10,6 @@ import ballerina/io;
 import ballerina/mime;
 import ballerina/regex;
 import ballerina/sql;
-import ballerina/url;
 import ballerinax/mysql;
 
 http:ClientConfiguration authEPConfig = {
@@ -162,7 +161,6 @@ service /auth on mainEP {
                         expiryTime: time:expierTimeStamp()
                     };
                     string token = check jwt:generateJWT(UserDTO.toJsonString());
-                    io:println(url:decode(token, "UTF-8"));
                     responseObj = {"success": true, "content": "Successfully Signed In", "token": token};
                 } else {
                     responseObj = {"success": false, "content": "Invalid password"};
