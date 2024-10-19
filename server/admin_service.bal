@@ -300,7 +300,7 @@ service /data on adminEP {
                 locations.push(location);
             };
         check locationStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locations, true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locations.toJson(), true);
     }
 
     resource function get admin/getLocationReviews/[string BALUSERTOKEN](int locationId) returns error|http:Response {
@@ -327,7 +327,7 @@ service /data on adminEP {
                 locationReviews.push(review);
             };
         check reviewStream.close();
-        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locationReviews, true);
+        return utils:returnResponseWithStatusCode(response, http:STATUS_OK, locationReviews.toJson(), true);
     }
 
     resource function get admin/getDestinations/[string BALUSERTOKEN]() returns http:Unauthorized & readonly|error|http:Response {

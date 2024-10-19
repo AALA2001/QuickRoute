@@ -43,7 +43,7 @@ export default function SingleThree({ data }) {
                       </div>
                       <div className="line mt-50 mb-50"></div>
                       <div className="d-flex justify-content-center">
-                        <button onClick={() => navigate('/invoice', { state: { plan: item, index: index } })}
+                        <button onClick={() => navigate('/itinerary-download', { state: { plan: item, index: index } })}
                           className="button -dark-1 p-3 bg-accent-1 text-20 rounded-5 text-white"
                           style={{ width: "200px" }}
                         >

@@ -125,7 +125,7 @@ export default function DBLocations() {
                   </thead>
 
                   <tbody>
-                    {paginatedLocations.length == 0 && <>
+                    {filteredLocations.length == 0 && <>
                       <tr>
                         <td colSpan="7" className="text-center h-50 ">
                           No locations available.

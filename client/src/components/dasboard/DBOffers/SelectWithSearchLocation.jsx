@@ -29,6 +29,7 @@ export default function SelectWithSearchLocation({ selected, onSelect, reset }) 
         })
         .then((data) => {
           if (data.success) {
+            console.log(data)
             setLocations(data.message)
           } else {
             toast.error(data.message);
@@ -73,19 +74,19 @@ export default function SelectWithSearchLocation({ selected, onSelect, reset }) 
         <div className="select__options js-options">
           {locations
             ?.filter((elm) =>
-              elm.location?.title?.toLowerCase().includes(searchQuery?.toLowerCase()),
+              elm?.title?.toLowerCase().includes(searchQuery?.toLowerCase()),
             )
             .map((elm) => (
               <div
                 onClick={() => {
-                  setSelectedItem(elm.location.title);
+                  setSelectedItem(elm.title);
                   setDdActive(false);
-                  onSelect(elm.location.location_id)
+                  onSelect(elm.location_id)
                 }}
                 className="select__options__button"
-                key={elm.location?.location_id}
+                key={elm?.location_id}
               >
-                {elm.location?.title}
+                {elm?.title}
               </div>
             ))}
         </div>

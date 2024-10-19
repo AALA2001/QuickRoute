@@ -35,7 +35,7 @@ export default function Reviews({ reviews = [] }) {
             <div className="col-auto">
               <div className="size-130">
                 <img
-                  src={elm.review_img}
+                  src={`http://localhost:9091/${elm.review_img}`}
                   alt="image"
                   className="img-cover rounded-12"
                 />

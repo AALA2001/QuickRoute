@@ -59,7 +59,7 @@ function App() {
             <Route path="/admin-login" element={<AdminLoginPage />} />
             <Route path="/suggestions/:id" element={<Suggestions />} />
             <Route path="/reviews" element={<ReviewsPage />} />
-            <Route path="/invoice" element={<Invoice />} />
+            <Route path="/itinerary-download" element={<Invoice />} />
 
             {/* Dashboard */}
             <Route path="/admin/dashboard" element={<DBMainPage />} />

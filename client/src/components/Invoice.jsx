@@ -35,6 +35,7 @@ export default function Invoice() {
           if (response.success) {
             toast.success("Itinerary generated successfully");
             window.print();
+            navigate('/')
           }
           setLoading(false)
         }).catch((error => console.log(error))).finally(() => {
@@ -57,7 +58,7 @@ export default function Invoice() {
               </button>
             </div>
 
-            <div className="bg-white rounded-4 mt-50" style={{ width: '70%', marginLeft: '14%' }}>
+            <div className="bg-white rounded-4 mt-25" style={{ width: '70%', marginLeft: '14%' }}>
               <div className="layout-pt-lg layout-pb-lg px-50 md:px-20">
                 <div className="row justify-between">
                   <div className="col-auto">

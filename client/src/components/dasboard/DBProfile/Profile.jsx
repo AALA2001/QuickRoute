@@ -34,6 +34,8 @@ export default function Profile() {
       toast.error("Old password required");
     } else if (newPw === "") {
       toast.error("New password required");
+    } else if (!newPw.match("^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$")) {
+      toast.error('Password must be at least 8 characters long and contain atleast one uppercase letter, one lowercase letter, one digit, and one special character')
     } else if (confirmPw === "") {
       toast.error("Confirm password required");
     } else if (newPw !== confirmPw) {
@@ -63,7 +65,7 @@ export default function Profile() {
             setOldPw("")
             setConfirmPw("")
           } else {
-            toast.error(data.message || "Password update failed");
+            toast.error(data?.message);
           }
         })
         .catch((error) => {
