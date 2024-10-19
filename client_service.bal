@@ -1,5 +1,6 @@
 import QuickRoute.OpenAI;
 import QuickRoute.db;
+import QuickRoute.email;
 import QuickRoute.filters;
 import QuickRoute.img;
 import QuickRoute.jwt;
@@ -11,7 +12,6 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/sql;
 import ballerinax/mysql;
-import QuickRoute.email;
 
 listener http:Listener clientSideEP = new (9093);
 
@@ -660,11 +660,13 @@ service /clientData on clientSideEP {
                 backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
                 return backendResponse;
             } else {
-                boolean sendEmail = email:sendEmail(subject = "Thank you for choosing QuickRoute AI Base Itinerary Planner",body = "",to = result.email);
+                string emailTemplate = "./resources/templates/email.txt";
+                string bodyContent = check io:fileReadString(emailTemplate);
+                boolean sendEmail = email:sendEmail(subject = "Thank you for choosing QuickRoute AI Base Itinerary Planner", body = bodyContent, to = result.email);
                 if sendEmail {
-                backendResponse.setJsonPayload({success: true, message: "email sent"});
-                backendResponse.statusCode = http:STATUS_OK;
-                return backendResponse;
+                    backendResponse.setJsonPayload({success: true, message: "email sent"});
+                    backendResponse.statusCode = http:STATUS_OK;
+                    return backendResponse;
                 } else {
                     backendResponse.setJsonPayload({success: false, message: "email not sent"});
                     backendResponse.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;

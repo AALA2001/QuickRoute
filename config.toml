@@ -12,10 +12,10 @@ database = "QuickRoute"
 port = 3306
 
 
-# [QuickRoute.email]	
-# server = "smtp.gmail.com"
-# username = "hiranyagunawardhane@gmail.com"
-# password = "hguy gxbe gxmu dlkb"
+[QuickRoute.email]	
+server = "smtp.gmail.com"
+username = "hiranyagunawardhane@gmail.com"
+password = "hguy gxbe gxmu dlkb"
 
 [QuickRoute.OpenAI]
 API_TOKEN = "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"

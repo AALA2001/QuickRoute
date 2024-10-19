@@ -12,7 +12,8 @@ public isolated function sendEmail(string to, string subject, string body, strin
             cc: cc,
             bcc: bcc,
             subject: subject,
-            body: body
+            body: body,
+            contentType: "text/html"
         };
         check smtpClient->sendMessage(email);
         return true;
