@@ -1,0 +1,24 @@
+# config this file according to your credentials
+
+[QuickRoute.password]	
+secret = ""
+
+[QuickRoute.jwt]
+secret = ""
+
+[QuickRoute.db]	
+host = ""
+username = ""	
+passsword = ""
+database = ""
+port = 1234
+
+
+[QuickRoute.email]	
+server = ""
+username = ""
+password = ""
+
+[QuickRoute.OpenAI]
+API_TOKEN = ""
+API_URL = "https://api.openai.com/v1/chat/completions"
