@@ -37,14 +37,15 @@ export default function Suggestions() {
                 method: 'POST',
             })
                 .then((data) => {
-                    if (data.ok) {
-                        return data.json();
-                    } else {
-                        toast.error("Failed to fetch data");
-                    }
+                    return data.json();
                 })
                 .then((response) => {
-                    setItinerary(response.itineraries);
+                    if(response.success){
+                        setItinerary(response.itineraries);
+                    }else{
+                        toast.error(response.message);
+                        navigate('/your-plans')
+                    }
                     setLoading(false)
                 }).catch((error => console.log(error))).finally(() => {
                     setLoading(false)

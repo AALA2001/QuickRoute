@@ -46,7 +46,7 @@ export default function Header3() {
 
           <div className="header__logo">
             <Link to="/" className="header__logo">
-              <img src="../../../../public/img/logo/2.png" className="" alt="logo icon" height={230} width={180}/>
+              <img src="/img/logo/2.png" className="" alt="logo icon" height={230} width={180}/>
             </Link>
 
             <Menu />

@@ -95,6 +95,7 @@ function CreatePlan({ open, setOpen }) {
                                             console.log(response)
                                             if (response.success) {
                                                 toast.success("Plan created successfully");
+                                                window.location.reload()
                                             }else{
                                                 toast.error(response.message);
                                             }

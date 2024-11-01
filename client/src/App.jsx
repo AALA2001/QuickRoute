@@ -1,7 +1,7 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Suspense, useEffect } from "react";
 import "./styles/style.css";
 import Aos from "aos";
-import { useEffect } from "react";
 import HomePage3 from "./pages/homes/home-3";
 import ScrollTopBehaviour from "./components/common/ScrollTopBehavier";
 import ScrollToTop from "./components/common/ScrollToTop";
@@ -30,6 +30,7 @@ import DBReviewsPage from "./pages/dashboard/db-reviews";
 import LocationReviews from "./components/dasboard/DBLocations/LocationReviews";
 import DBProfilePage from "./pages/dashboard/db-profile";
 import AdminLoginPage from "./pages/pages/adminLogin";
+import Loader from "./components/Loader";
 
 function App() {
   useEffect(() => {
@@ -42,45 +43,47 @@ function App() {
   return (
     <>
       <BrowserRouter>
-        <Routes>
-          <Route path="/">
-            <Route index element={<HomePage3 />} />
-            <Route path="/home" element={<HomePage3 />} />
-            <Route path="/tour-list" element={<TourListPage6 />} />
-            <Route path="/tour-single/:id" element={<TourSinglePage1 />} />
+        <Suspense fallback={<Loader/>}>
+          <Routes>
+            <Route path="/">
+              <Route index element={<HomePage3 />} />
+              <Route path="/home" element={<HomePage3 />} />
+              <Route path="/tour-list" element={<TourListPage6 />} />
+              <Route path="/tour-single/:id" element={<TourSinglePage1 />} />
 
-            <Route path="/destinations/:id" element={<DestinationsPage />} />
-            <Route path="/help-center" element={<HelpCenterPage />} />
-            <Route path="/wishlist" element={<WishlistPage />} />
-            <Route path="/your-plans" element={<PlansPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/admin-login" element={<AdminLoginPage />} />
-            <Route path="/suggestions/:id" element={<Suggestions />} />
-            <Route path="/reviews" element={<ReviewsPage />} />
-            <Route path="/itinerary-download" element={<Invoice />} />
+              <Route path="/destinations/:id" element={<DestinationsPage />} />
+              <Route path="/help-center" element={<HelpCenterPage />} />
+              <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="/your-plans" element={<PlansPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/admin-login" element={<AdminLoginPage />} />
+              <Route path="/suggestions/:id" element={<Suggestions />} />
+              <Route path="/reviews" element={<ReviewsPage />} />
+              <Route path="/itinerary-download" element={<Invoice />} />
 
-            {/* Dashboard */}
-            <Route path="/admin/dashboard" element={<DBMainPage />} />
-            <Route path="/admin/destinations" element={<DBDestinationsPage />} />
-            <Route path="/admin/destinations/add-destination" element={<AddDestination />} />
-            <Route path="/admin/destinations/edit-destination" element={<AddDestination />} />
-            <Route path="/admin/locations" element={<DBLocationsPage />} />
-            <Route path="/admin/locations/add-location" element={<AddLocation />} />
-            <Route path="/admin/locations/edit-location" element={<AddLocation />} />
-            <Route path="/admin/locations/location-reviews" element={<LocationReviews />} />
-            <Route path="/admin/offers" element={<DBOffersPage />} />
-            <Route path="/admin/offers/add-offer" element={<AddOffer />} />
-            <Route path="/admin/offers/edit-offer" element={<AddOffer />} />
-            <Route path="/admin/reviews" element={<DBReviewsPage />} />
-            <Route path="/admin/profile" element={<DBProfilePage />} />
+              {/* Dashboard */}
+              <Route path="/admin/dashboard" element={<DBMainPage />} />
+              <Route path="/admin/destinations" element={<DBDestinationsPage />} />
+              <Route path="/admin/destinations/add-destination" element={<AddDestination />} />
+              <Route path="/admin/destinations/edit-destination" element={<AddDestination />} />
+              <Route path="/admin/locations" element={<DBLocationsPage />} />
+              <Route path="/admin/locations/add-location" element={<AddLocation />} />
+              <Route path="/admin/locations/edit-location" element={<AddLocation />} />
+              <Route path="/admin/locations/location-reviews" element={<LocationReviews />} />
+              <Route path="/admin/offers" element={<DBOffersPage />} />
+              <Route path="/admin/offers/add-offer" element={<AddOffer />} />
+              <Route path="/admin/offers/edit-offer" element={<AddOffer />} />
+              <Route path="/admin/reviews" element={<DBReviewsPage />} />
+              <Route path="/admin/profile" element={<DBProfilePage />} />
 
-            <Route path="/404" element={<NotFoundPage />} />
-            <Route path="/*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-        <ScrollTopBehaviour />
+              <Route path="/404" element={<NotFoundPage />} />
+              <Route path="/*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+          <ScrollTopBehaviour />
+        </Suspense>
       </BrowserRouter>
       <ScrollToTop />
     </>

@@ -21,7 +21,7 @@ export default function Hero({ onSearchTextChange }) {
               <h1 className="pageHeader__title">Your Plans</h1>
 
               <p className="pageHeader__text">
-                Lorem ipsum is placeholder text commonly used in site.
+                Personalized your plans
               </p>
 
               <div className="pageHeader__search">
