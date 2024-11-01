@@ -63,7 +63,7 @@ export default function Invoice() {
                 <div className="row justify-between">
                   <div className="col-auto">
                     <Link to="/">
-                      <img className="" src="../../public/img/logo/2.png" width={250} alt="Logo" />
+                      <img className="" src="/img/logo/2.png" width={250} alt="Logo" />
                     </Link>
                   </div>
                 </div>

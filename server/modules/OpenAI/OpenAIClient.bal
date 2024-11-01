@@ -5,7 +5,7 @@ configurable string API_TOKEN = ?;
 
 public isolated function generateText(string query) returns json|error? {
     json requestBody = {
-        model: "gpt-4-turbo",
+        model: "gpt-3.5-turbo-0125",
         messages: [
             { role: "user", content: query }
         ]

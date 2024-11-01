@@ -37,15 +37,15 @@ export default function Suggestions() {
                 method: 'POST',
             })
                 .then((data) => {
-                    return data.json();
-                })
-                .then((response) => {
-                    if(response.success){
-                        setItinerary(response.itineraries);
-                    }else{
-                        toast.error(response.message);
+                    if(data.status == 200){
+                        return data.json()
+                    }else if (data.status == 404){
+                        toast.error("No places found");
                         navigate('/your-plans')
                     }
+                })
+                .then((response) => {
+                        setItinerary(response.itineraries);
                     setLoading(false)
                 }).catch((error => console.log(error))).finally(() => {
                     setLoading(false)
