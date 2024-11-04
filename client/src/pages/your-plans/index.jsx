@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import decodeJWT from "@/util/JWTDecode";
 import getCurrentTimeISO from "@/util/CurrentTimeIOS";
 import toast from "react-hot-toast";
+import FooterThree from "@/components/layout/footers/FooterThree";
 
 const metadata = {
     title: "PlansPage || ViaTour - Travel & Tour Reactjs Template",
@@ -63,7 +64,7 @@ export default function PlansPage() {
                 <Header3 />
                 <Hero onSearchTextChange={handleSearchTextChange}/>
                 <PlanCard data={plans} searchText={searchText}/>
-                <FooterOne />
+                <FooterThree />
             </main>
         </>
     );
