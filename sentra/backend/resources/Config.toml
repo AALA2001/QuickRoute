@@ -1,0 +1,20 @@
+[database]
+host = "localhost"
+port = 3306
+user = "root"
+password = "your_password"
+database = "sentra_db"
+
+[security]
+jwt_secret = "your-super-secret-jwt-key-change-in-production"
+jwt_expiry = 86400  # 24 hours
+
+[external_apis]
+hibp_api_key = "your-hibp-api-key"
+virustotal_api_key = "your-virustotal-api-key"
+
+[email]
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+smtp_username = "your-email@gmail.com"
+smtp_password = "your-app-password"
