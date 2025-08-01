@@ -1,0 +1,435 @@
+name: Sentra CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  BALLERINA_VERSION: 'swan-lake-latest'
+
+jobs:
+  # Backend testing and linting
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: sentra_test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: testpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Ballerina
+      run: |
+        wget https://dist.ballerina.io/downloads/swan-lake-latest/ballerina-linux-installer-x64-swan-lake-latest.deb
+        sudo dpkg -i ballerina-linux-installer-x64-swan-lake-latest.deb
+
+    - name: Verify Ballerina installation
+      run: bal version
+
+    - name: Setup test database
+      run: |
+        mysql -h 127.0.0.1 -u root -ptestpassword -e "CREATE DATABASE IF NOT EXISTS sentra_test_db;"
+        mysql -h 127.0.0.1 -u root -ptestpassword sentra_test_db < database/schema.sql
+
+    - name: Configure test environment
+      run: |
+        cd backend
+        cp resources/Config.toml resources/Config-test.toml
+        sed -i 's/host = "localhost"/host = "127.0.0.1"/' resources/Config-test.toml
+        sed -i 's/password = "your_password"/password = "testpassword"/' resources/Config-test.toml
+        sed -i 's/database = "sentra_db"/database = "sentra_test_db"/' resources/Config-test.toml
+
+    - name: Build backend
+      run: |
+        cd backend
+        bal build
+
+    - name: Run backend tests
+      run: |
+        cd backend
+        bal test
+
+    - name: Check Ballerina code formatting
+      run: |
+        cd backend
+        bal format --dry-run
+
+  # Frontend testing and linting
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Lint code
+      run: |
+        cd frontend
+        npm run lint --if-present
+
+    - name: Type check
+      run: |
+        cd frontend
+        npm run type-check --if-present
+
+    - name: Run tests
+      run: |
+        cd frontend
+        npm test -- --coverage --ci --reporters=default --reporters=jest-junit --watchAll=false
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: frontend-test-results
+        path: frontend/coverage/
+
+  # Security scanning
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Setup Node.js for npm audit
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Frontend security audit
+      run: |
+        cd frontend
+        npm audit --audit-level=high
+
+  # Code quality checks
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Shallow clones should be disabled for better analysis
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # Integration tests
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: testpassword
+          MYSQL_DATABASE: sentra_test_db
+          MYSQL_USER: test_user
+          MYSQL_PASSWORD: testpassword
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Ballerina
+      run: |
+        wget https://dist.ballerina.io/downloads/swan-lake-latest/ballerina-linux-installer-x64-swan-lake-latest.deb
+        sudo dpkg -i ballerina-linux-installer-x64-swan-lake-latest.deb
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup test database
+      run: |
+        mysql -h 127.0.0.1 -u root -ptestpassword -e "CREATE DATABASE IF NOT EXISTS sentra_test_db;"
+        mysql -h 127.0.0.1 -u root -ptestpassword sentra_test_db < database/schema.sql
+
+    - name: Configure test environment
+      run: |
+        cd backend
+        cp resources/Config.toml resources/Config-test.toml
+        sed -i 's/host = "localhost"/host = "127.0.0.1"/' resources/Config-test.toml
+        sed -i 's/password = "your_password"/password = "testpassword"/' resources/Config-test.toml
+        sed -i 's/database = "sentra_db"/database = "sentra_test_db"/' resources/Config-test.toml
+        sed -i 's/hibp_api_key = "your-hibp-api-key"/hibp_api_key = "test-key"/' resources/Config-test.toml
+        sed -i 's/virustotal_api_key = "your-virustotal-api-key"/virustotal_api_key = "test-key"/' resources/Config-test.toml
+
+    - name: Start backend service
+      run: |
+        cd backend
+        bal run &
+        sleep 30  # Wait for service to start
+
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Serve frontend
+      run: |
+        cd frontend
+        npm install -g serve
+        serve -s build -l 3000 &
+        sleep 10
+
+    - name: Run API integration tests
+      run: |
+        chmod +x scripts/test-api.sh
+        ./scripts/test-api.sh
+
+    - name: Run E2E tests with Playwright
+      run: |
+        cd frontend
+        npx playwright install
+        npm run test:e2e --if-present
+
+  # Build and push Docker images (only on main branch)
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    needs: [backend-test, frontend-test, security-scan, integration-test]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: |
+          sentra/backend
+          sentra/frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+
+    - name: Build and push backend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        tags: sentra/backend:latest,sentra/backend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        tags: sentra/frontend:latest,sentra/frontend:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Deploy to staging (only on main branch)
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: github.ref == 'refs/heads/main'
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to staging server
+      uses: appleboy/ssh-action@v0.1.4
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USERNAME }}
+        key: ${{ secrets.STAGING_PRIVATE_KEY }}
+        script: |
+          cd /opt/sentra-staging
+          git pull origin main
+          docker-compose pull
+          docker-compose up -d
+          
+          # Wait for services to be ready
+          sleep 30
+          
+          # Run health checks
+          curl -f http://localhost:8080/api/health || exit 1
+          curl -f http://localhost:3000 || exit 1
+
+    - name: Run staging smoke tests
+      run: |
+        # Add staging-specific smoke tests here
+        curl -f ${{ secrets.STAGING_URL }}/api/health
+
+  # Performance testing
+  performance-test:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Run k6 performance tests
+      uses: grafana/k6-action@v0.2.0
+      with:
+        filename: performance/load-test.js
+      env:
+        BASE_URL: ${{ secrets.STAGING_URL }}
+
+  # Deploy to production (manual approval required)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, performance-test]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to production
+      uses: appleboy/ssh-action@v0.1.4
+      with:
+        host: ${{ secrets.PRODUCTION_HOST }}
+        username: ${{ secrets.PRODUCTION_USERNAME }}
+        key: ${{ secrets.PRODUCTION_PRIVATE_KEY }}
+        script: |
+          cd /opt/sentra-production
+          git pull origin main
+          ./scripts/deploy-production.sh
+
+    - name: Verify production deployment
+      run: |
+        curl -f ${{ secrets.PRODUCTION_URL }}/api/health
+        echo "Production deployment successful!"
+
+    - name: Notify team
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      if: always()
+
+  # Cleanup
+  cleanup:
+    name: Cleanup
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always()
+
+    steps:
+    - name: Clean up old Docker images
+      run: |
+        # This would run on your Docker registry to clean up old images
+        echo "Cleanup completed"
+
+# Workflow notifications
+notifications:
+  runs-on: ubuntu-latest
+  needs: [deploy-production]
+  if: failure()
+
+  steps:
+  - name: Notify on failure
+    uses: 8398a7/action-slack@v3
+    with:
+      status: failure
+      channel: '#alerts'
+      webhook_url: ${{ secrets.SLACK_WEBHOOK }}
